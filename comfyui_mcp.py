@@ -12,10 +12,10 @@ Tools expuestas:
   list_models      checkpoints y loras que ComfyUI tiene disponibles
   comfy_health     estado del server ComfyUI: versión, VRAM libre/total, cola
 
-GPU arbiter: antes de generar, se asegura de que comfyui.service esté arriba
-(local, sudo systemctl start — sudoers scoped en /etc/sudoers.d/gpu-arbiter).
-systemd Conflicts= tumba llama-server.service solo, y viceversa (ver
-llama_log_proxy.py en ~/stack/llama-proxy/).
+GPU arbiter: usa el GPU Broker (~/stack/gpu-broker/gpu-broker.sh) para
+coordinar el uso de la GPU con llama-server. El broker para llama-server
+gracefully si está idle, libera VRAM, y lo re-arranca al terminar.
+También puede arrancar comfyui.service si no está corriendo.
 
 Configuración:
   COMFYUI_URL         default http://127.0.0.1:8188 (loopback, corre en la misma máquina)
@@ -40,6 +40,7 @@ import uvicorn
 
 COMFY_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
 COMFYUI_SERVICE = "comfyui.service"
+GPU_BROKER = os.path.expanduser("~/stack/gpu-broker/gpu-broker.sh")
 _WAKE_TIMEOUT_S = 90
 _WAKE_POLL_S = 2
 
@@ -104,14 +105,14 @@ async def _comfyui_reachable() -> bool:
 
 
 async def ensure_comfyui_running() -> str | None:
-    """Si ComfyUI no responde, arranca comfyui.service (systemd Conflicts=
-    tumba llama-server.service solo). Devuelve None si OK, o mensaje de error."""
+    """Si ComfyUI no responde, arranca comfyui.service. El GPU Broker
+    (configurado en ExecStartPre del systemd service) se encarga de parar
+    llama-server gracefully si está idle. Devuelve None si OK, o error."""
     if await _comfyui_reachable():
         return None
-    r = subprocess.run(["sudo", "systemctl", "start", COMFYUI_SERVICE],
-                        capture_output=True, text=True)
-    if r.returncode != 0:
-        return f"No se pudo arrancar {COMFYUI_SERVICE}: {r.stderr.strip() or r.stdout.strip()}"
+    # Arrancar comfyui.service — el ExecStartPre del drop-in llama al broker
+    subprocess.run(["systemctl", "start", COMFYUI_SERVICE],
+                   capture_output=True, text=True)
     deadline = time.time() + _WAKE_TIMEOUT_S
     while time.time() < deadline:
         if await _comfyui_reachable():
@@ -317,9 +318,8 @@ async def list_models() -> str:
     description="Estado de ComfyUI: si responde, VRAM libre/total de la GPU y tamaño de la cola.",
 )
 async def comfy_health() -> str:
-    wake_err = await ensure_comfyui_running()
-    if wake_err:
-        return f"ComfyUI no disponible: {wake_err}"
+    if not await _comfyui_reachable():
+        return "ComfyUI no disponible (inactivo). Usar generate_image para arrancarlo."
     async with _client() as c:
         r = await c.get("/system_stats")
         r.raise_for_status()
