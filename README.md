@@ -11,6 +11,7 @@ Corre en Pop!_OS junto con ComfyUI (puerto 8188). Expone herramientas vía HTTP/
 | `generate_image` | txt2img con presets (producto/realista/rapido/anime) o params manuales |
 | `list_models` | Lista checkpoints, loras y samplers disponibles |
 | `comfy_health` | Estado de ComfyUI: versión, VRAM libre/total, cola |
+| `comfy_view_url` | URL LAN de descarga directa para una imagen ya generada |
 
 ## Presets
 
@@ -25,10 +26,23 @@ Corre en Pop!_OS junto con ComfyUI (puerto 8188). Expone herramientas vía HTTP/
 
 | Env var | Default | Descripción |
 |---------|---------|-------------|
-| `COMFYUI_URL` | `http://127.0.0.1:8188` | URL de ComfyUI |
-| `COMFYUI_OUTPUT_DIR` | `~/stack/comfyui/output` | Directorio de output |
+| `COMFYUI_URL` | `http://127.0.0.1:8188` | URL de ComfyUI (loopback) |
+| `COMFYUI_PUBLIC_URL` | `http://192.168.68.108:8188` | URL LAN para descarga directa |
 | `MCP_PORT` | `8201` | Puerto del MCP server |
 | `MCP_HOST` | `0.0.0.0` | Host binding |
+
+## Estructura
+
+```
+src/comfyui_mcp/
+├── config.py          # env vars, presets, aspects
+├── comfy_client.py    # HTTP client thin a ComfyUI
+├── gpu_arbiter.py     # ensure_comfyui_running + wake
+├── workflow.py        # build_workflow (txt2img + img2img)
+├── tools/             # generate_image, list_models, comfy_health, comfy_view_url
+└── server.py          # FastMCP + entry point
+tests/                 # pytest por módulo
+```
 
 ## GPU Broker
 
@@ -40,7 +54,10 @@ El MCP usa el [GPU Broker](../stack/gpu-broker/) para coordinar el uso de la GPU
 # venv
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
+
+# tests
+pytest
 
 # systemd
 sudo cp comfyui-mcp.service /etc/systemd/system/
