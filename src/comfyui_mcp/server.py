@@ -9,6 +9,7 @@ import uvicorn
 
 from .tools.generate import generate_image
 from .tools.health import comfy_health
+from .tools.img2img import img2img
 from .tools.models import list_models
 from .tools.view import comfy_view_url
 
@@ -53,6 +54,19 @@ async def _comfy_health() -> str:
 )
 async def _comfy_view_url(filename: str, subfolder: str = "", img_type: str = "output") -> str:
     return await comfy_view_url(filename, subfolder, img_type)
+
+
+@mcp.tool(
+    name="img2img",
+    description=(
+        "Varía una imagen ya generada usando img2img. Pasar image_filename (ej: "
+        "test_00001_.png) y denoise (0.0=idéntica, 1.0=completamente nueva, "
+        "0.3-0.7 recomendado). Si prompt está vacío, hace variación visual pura. "
+        "Útil para iterar un arte sin partir de cero o generar variaciones de memes."
+    ),
+)
+async def _img2img(**kwargs) -> str:
+    return await img2img(**kwargs)
 
 
 def main():
