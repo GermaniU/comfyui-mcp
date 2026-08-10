@@ -87,7 +87,7 @@ Crea un archivo `.env` o exporta las siguientes variables:
 | Variable | Valor por Defecto | Descripción |
 |----------|-------------------|-------------|
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | URL loopback donde escucha el motor de ComfyUI. |
-| `COMFYUI_PUBLIC_URL` | `http://192.168.68.108:8188` | Base URL pública/LAN para descarga de imágenes. |
+| `COMFYUI_PUBLIC_URL` | `http://<YOUR_SERVER_IP>:8188` | Base URL pública/LAN para descarga de imágenes. |
 | `MCP_HOST` | `0.0.0.0` | Host binding para el servidor MCP. |
 | `MCP_PORT` | `8201` | Puerto HTTP/SSE del servidor MCP. |
 
@@ -146,7 +146,7 @@ Construye la URL LAN de descarga directa para un archivo generado previamente da
 {
   "mcpServers": {
     "comfyui": {
-      "url": "http://192.168.68.108:8201/mcp"
+      "url": "http://<YOUR_SERVER_IP>:8201/mcp"
     }
   }
 }
@@ -157,7 +157,7 @@ Construye la URL LAN de descarga directa para un archivo generado previamente da
 ```yaml
 mcp_servers:
   comfyui:
-    url: "http://192.168.68.108:8201/mcp"
+    url: "http://<YOUR_SERVER_IP>:8201/mcp"
     transport: "http"
 ```
 

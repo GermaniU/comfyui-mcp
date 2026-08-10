@@ -103,11 +103,11 @@ Permite la gestión de servicios sin contraseña para el usuario de ejecución:
 ```ini
 # /etc/sudoers.d/gpu-arbiter
 # Permisos limitados para el arbitraje de GPU
-germani ALL=(ALL) NOPASSWD: /usr/bin/systemctl start comfyui.service
-germani ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop comfyui.service
-germani ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart comfyui.service
-germani ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active comfyui.service
-germani ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop llama-server.service
+<YOUR_USER> ALL=(ALL) NOPASSWD: /usr/bin/systemctl start comfyui.service
+<YOUR_USER> ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop comfyui.service
+<YOUR_USER> ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart comfyui.service
+<YOUR_USER> ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active comfyui.service
+<YOUR_USER> ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop llama-server.service
 ```
 
 > **Importante**: El archivo en `/etc/sudoers.d/gpu-arbiter` debe tener permisos `0440` (`sudo chmod 0440 /etc/sudoers.d/gpu-arbiter`).
@@ -122,13 +122,13 @@ germani ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop llama-server.service
 [Unit]
 Description=ComfyUI Backend Engine
 After=network.target
-Conflicts=llama-server.service
+# Conflicts=llama-server.service  # (handled by GPU Broker)
 
 [Service]
 Type=simple
-User=germani
-WorkingDirectory=/home/germani/stack/comfyui
-ExecStart=/home/germani/stack/comfyui/.venv/bin/python main.py --listen 127.0.0.1 --port 8188
+User=<YOUR_USER>
+WorkingDirectory=<HOME>/stack/comfyui
+ExecStart=<HOME>/stack/comfyui/.venv/bin/python main.py --listen 127.0.0.1 --port 8188
 Restart=always
 RestartSec=5
 
@@ -145,14 +145,14 @@ After=network.target comfyui.service
 
 [Service]
 Type=simple
-User=germani
-WorkingDirectory=/home/germani/Sites/comfyui-mcp
-Environment="PATH=/home/germani/Sites/comfyui-mcp/.venv/bin:/usr/bin"
+User=<YOUR_USER>
+WorkingDirectory=<HOME>/Sites/comfyui-mcp
+Environment="PATH=<HOME>/Sites/comfyui-mcp/.venv/bin:/usr/bin"
 Environment="COMFYUI_URL=http://127.0.0.1:8188"
-Environment="COMFYUI_PUBLIC_URL=http://192.168.68.108:8188"
+Environment="COMFYUI_PUBLIC_URL=http://<YOUR_SERVER_IP>:8188"
 Environment="MCP_PORT=8201"
 Environment="MCP_HOST=0.0.0.0"
-ExecStart=/home/germani/Sites/comfyui-mcp/.venv/bin/python -m comfyui_mcp.server
+ExecStart=<HOME>/Sites/comfyui-mcp/.venv/bin/python -m comfyui_mcp.server
 Restart=always
 RestartSec=3
 
@@ -167,7 +167,7 @@ WantedBy=multi-user.target
 Para permitir que otros nodos de la red LAN consuman el MCP en el puerto `8201` y descarguen imágenes del puerto `8188`:
 
 ```bash
-sudo ufw allow from 192.168.68.0/24 to any port 8201 proto tcp comment "ComfyUI MCP HTTP"
-sudo ufw allow from 192.168.68.0/24 to any port 8188 proto tcp comment "ComfyUI Direct Image Download"
+sudo ufw allow from <YOUR_LAN_CIDR> to any port 8201 proto tcp comment "ComfyUI MCP HTTP"
+sudo ufw allow from <YOUR_LAN_CIDR> to any port 8188 proto tcp comment "ComfyUI Direct Image Download"
 sudo ufw reload
 ```

@@ -90,4 +90,4 @@
 ## 🔒 Red y Seguridad
 
 - **Loopback Interno**: ComfyUI escucha en `127.0.0.1:8188` para evitar exponer APIs administrativas no autenticadas a la red externa.
-- **MCP LAN Binding**: El MCP server se enlaza en `0.0.0.0:8201` (o la interfaz LAN configurada), protegido por reglas UFW del host (`ufw allow from 192.168.68.0/24`).
+- **MCP LAN Binding**: El MCP server se enlaza en `0.0.0.0:8201` (o la interfaz LAN configurada), protegido por reglas UFW del host (`ufw allow from <YOUR_LAN_CIDR>`).
