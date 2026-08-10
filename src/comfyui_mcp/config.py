@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 COMFY_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
-COMFY_PUBLIC_URL = os.getenv("COMFYUI_PUBLIC_URL", "http://192.168.68.108:8188")
+COMFY_PUBLIC_URL = os.getenv("COMFYUI_PUBLIC_URL", "http://localhost:8188")
 COMFYUI_SERVICE = "comfyui.service"
 GPU_BROKER = os.path.expanduser("~/stack/gpu-broker/gpu-broker.sh")
 
