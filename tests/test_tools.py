@@ -2,13 +2,14 @@
 
 import pytest
 
+from comfyui_mcp.config import COMFY_PUBLIC_URL
 from comfyui_mcp.tools.generate import _view_url
 from comfyui_mcp.tools.view import comfy_view_url
 
 
 def test_view_url_usa_public_url():
     url = _view_url("img.png", "", "output")
-    assert "192.168.68.108:8188" in url
+    assert COMFY_PUBLIC_URL in url
     assert "filename=img.png" in url
 
 
