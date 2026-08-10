@@ -1,10 +1,16 @@
 """Tool img2img: variar una imagen existente con denoise controlado."""
 
+import os
+import shutil
 import random
 
 from .. import comfy_client, gpu_arbiter, workflow
 from ..config import (ASPECTS, DEFAULT_NEGATIVE, GENERATE_TIMEOUT, PRESETS,
                       COMFY_PUBLIC_URL)
+
+# ComfyUI busca imágenes de LoadImage en input/, no en output/
+_INPUT_DIR = os.path.expanduser("~/stack/comfyui/input")
+_OUTPUT_DIR = os.path.expanduser("~/stack/comfyui/output")
 
 
 def _view_url(filename: str, subfolder: str, img_type: str) -> str:
@@ -48,6 +54,12 @@ async def img2img(
     # Si no hay prompt, usar uno neutro que no distorsione
     if not prompt:
         prompt = "high quality, detailed, sharp focus"
+
+    # ComfyUI LoadImage busca en input/. Si la imagen está en output/, copiarla.
+    src_output = os.path.join(_OUTPUT_DIR, image_filename)
+    dst_input = os.path.join(_INPUT_DIR, image_filename)
+    if os.path.isfile(src_output) and not os.path.isfile(dst_input):
+        shutil.copy2(src_output, dst_input)
 
     try:
         wf = workflow.build_img2img(
