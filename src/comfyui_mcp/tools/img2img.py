@@ -1,12 +1,16 @@
 """Tool img2img: variar una imagen existente con denoise controlado."""
 
 import os
-import shutil
 import random
+import shutil
 
 from .. import comfy_client, gpu_arbiter, workflow
-from ..config import (ASPECTS, DEFAULT_NEGATIVE, GENERATE_TIMEOUT, PRESETS,
-                      COMFY_PUBLIC_URL)
+from ..config import (
+    COMFY_PUBLIC_URL,
+    DEFAULT_NEGATIVE,
+    GENERATE_TIMEOUT,
+    PRESETS,
+)
 
 # ComfyUI busca imágenes de LoadImage en input/, no en output/
 _INPUT_DIR = os.path.expanduser("~/stack/comfyui/input")
@@ -69,12 +73,12 @@ async def img2img(
         )
         prompt_id = await comfy_client.submit_prompt(wf)
         entry = await comfy_client.wait_for_result(prompt_id, GENERATE_TIMEOUT)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return f"Error en img2img: {type(e).__name__}: {e}"
 
     files = []
-    for node_out in entry.get("outputs", {}).values():
-        for img in node_out.get("images", []):
+    for output in entry.get("outputs", {}).values():
+        for img in output.get("images", []):
             sub = img.get("subfolder", "")
             files.append({"filename": img["filename"], "subfolder": sub,
                           "type": img.get("type", "output")})
@@ -82,8 +86,12 @@ async def img2img(
     if not files:
         return f"Terminó sin imágenes (prompt_id {prompt_id})."
 
-    lines = [f"{len(files)} imagen(es) generada(s) · img2img · base={image_filename} · "
-             f"denoise={denoise} · seed={seed} · {checkpoint} · {steps} steps:"]
+    lines = [
+        (
+            f"{len(files)} imagen(es) generada(s) · img2img · base={image_filename} · "
+            f"denoise={denoise} · seed={seed} · {checkpoint} · {steps} steps:"
+        )
+    ]
     for f in files:
         lines.append(f"  · {f['filename']} → {_view_url(f['filename'], f['subfolder'], f['type'])}")
     return "\n".join(lines)

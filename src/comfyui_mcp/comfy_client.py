@@ -14,7 +14,7 @@ async def reachable() -> bool:
         async with _client(timeout=3.0) as c:
             r = await c.get("/system_stats")
             return r.status_code == 200
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
