@@ -26,13 +26,14 @@ Corre en Pop!_OS junto con ComfyUI (puerto 8188). Expone herramientas vía HTTP/
 | Env var | Default | Descripción |
 |---------|---------|-------------|
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | URL de ComfyUI |
-| `COMFYUI_OUTPUT_DIR` | `~/stack/comfyui/output` | Directorio de output |
 | `MCP_PORT` | `8201` | Puerto del MCP server |
 | `MCP_HOST` | `0.0.0.0` | Host binding |
 
-## GPU Broker
+## Coordinación de GPU (opcional)
 
-El MCP usa el [GPU Broker](../stack/gpu-broker/) para coordinar el uso de la GPU con llama-server. Antes de generar, asegura que ComfyUI tenga VRAM disponible. Ver `gpu-broker.sh` para detalles.
+Si `ComfyUI` no responde, este MCP arranca `comfyui.service` (systemd) y espera a que levante — eso es todo lo que hace este repo respecto a GPU.
+
+Si tu setup corre otros procesos que compiten por VRAM (un LLM local, por ejemplo), puedes liberar VRAM *antes* de que `comfyui.service` arranque agregando un `ExecStartPre=` a tu propia unit de `comfyui.service` que pare esos procesos. Ese mecanismo vive en tu infraestructura, fuera de este repo — no es necesario para usar el MCP.
 
 ## Instalación
 
@@ -42,7 +43,8 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# systemd
+# systemd — editar comfyui-mcp.service primero: reemplazar <usuario> y
+# /ruta/al/repo por los valores reales de tu máquina
 sudo cp comfyui-mcp.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now comfyui-mcp.service
@@ -57,3 +59,9 @@ curl -X POST http://localhost:8201/mcp \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
+
+⚠️ El servidor escucha en `0.0.0.0` por defecto y no tiene autenticación — pensado para redes internas de confianza. Si lo expones a una red no confiable, pon un proxy con auth delante.
+
+## Licencia
+
+[MIT](LICENSE).

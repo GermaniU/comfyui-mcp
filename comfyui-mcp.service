@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=g3rm4n1
-WorkingDirectory=/home/g3rm4n1/Sites/comfyui-mcp
+User=<usuario>
+WorkingDirectory=/ruta/al/repo
 Environment=COMFYUI_URL=http://127.0.0.1:8188
 Environment=MCP_PORT=8201
-ExecStart=/home/g3rm4n1/Sites/comfyui-mcp/venv/bin/python /home/g3rm4n1/Sites/comfyui-mcp/comfyui_mcp.py
+ExecStart=/ruta/al/repo/venv/bin/python /ruta/al/repo/comfyui_mcp.py
 Restart=on-failure
 RestartSec=5
 

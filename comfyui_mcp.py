@@ -12,18 +12,20 @@ Tools expuestas:
   list_models      checkpoints y loras que ComfyUI tiene disponibles
   comfy_health     estado del server ComfyUI: versión, VRAM libre/total, cola
 
-GPU arbiter: usa el GPU Broker (~/stack/gpu-broker/gpu-broker.sh) para
-coordinar el uso de la GPU con llama-server. El broker para llama-server
-gracefully si está idle, libera VRAM, y lo re-arranca al terminar.
-También puede arrancar comfyui.service si no está corriendo.
+Si ComfyUI no responde, este MCP arranca comfyui.service (systemd) y espera
+a que levante. La coordinación de GPU con otros procesos (parar un LLM local
+que esté idle para liberar VRAM antes de que ComfyUI la use) es
+responsabilidad de ese servicio — no de este archivo — vía su propio
+ExecStartPre; no es necesaria para usar el MCP.
 
 Configuración:
-  COMFYUI_URL         default http://127.0.0.1:8188 (loopback, corre en la misma máquina)
-  COMFYUI_OUTPUT_DIR  default ~/stack/comfyui/output (las imágenes quedan EN Pop!_OS;
-                       el caller recibe filename+subfolder y puede pedirlas por /view
-                       de ComfyUI directo, o vía un futuro endpoint de descarga)
-  MCP_PORT            default 8201
-  MCP_HOST            default 0.0.0.0
+  COMFYUI_URL  default http://127.0.0.1:8188 (loopback, corre en la misma máquina)
+  MCP_PORT     default 8201
+  MCP_HOST     default 0.0.0.0
+
+Las imágenes quedan donde ComfyUI las guarde (su propio output dir, no
+configurable desde este MCP); el caller recibe filename+subfolder y arma
+la URL de /view para descargarlas directo de ComfyUI.
 """
 import asyncio
 import os
@@ -40,7 +42,6 @@ import uvicorn
 
 COMFY_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
 COMFYUI_SERVICE = "comfyui.service"
-GPU_BROKER = os.path.expanduser("~/stack/gpu-broker/gpu-broker.sh")
 _WAKE_TIMEOUT_S = 90
 _WAKE_POLL_S = 2
 
