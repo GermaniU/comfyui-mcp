@@ -5,7 +5,7 @@ import subprocess
 import time
 
 from . import comfy_client
-from .config import COMFYUI_SERVICE, _WAKE_POLL_S, _WAKE_TIMEOUT_S
+from .config import _WAKE_POLL_S, _WAKE_TIMEOUT_S, COMFYUI_SERVICE
 
 
 async def ensure_comfyui_running() -> str | None:
@@ -14,8 +14,8 @@ async def ensure_comfyui_running() -> str | None:
     llama-server gracefully si está idle. Devuelve None si OK, o error."""
     if await comfy_client.reachable():
         return None
-    subprocess.run(["systemctl", "start", COMFYUI_SERVICE],
-                   capture_output=True, text=True)
+    subprocess.run(["systemctl", "start", COMFYUI_SERVICE],  # noqa: ASYNC221
+                   capture_output=True, text=True, check=False)
     deadline = time.time() + _WAKE_TIMEOUT_S
     while time.time() < deadline:
         if await comfy_client.reachable():

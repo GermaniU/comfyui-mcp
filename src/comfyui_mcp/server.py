@@ -3,9 +3,11 @@
 import os
 import sys
 
-from fastmcp import FastMCP
-from starlette.middleware.cors import CORSMiddleware
 import uvicorn
+from fastmcp import FastMCP
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from .tools.generate import generate_image
 from .tools.health import comfy_health
@@ -14,6 +16,17 @@ from .tools.models import list_models
 from .tools.view import comfy_view_url
 
 mcp = FastMCP("comfyui-image")
+
+
+class BearerAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        token = os.getenv("MCP_AUTH_TOKEN")
+        if token:
+            header = request.headers.get("authorization", "")
+            expected = f"Bearer {token}"
+            if header != expected:
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return await call_next(request)
 
 
 @mcp.tool(
@@ -116,6 +129,7 @@ def main():
         mcp.run(transport="stdio")
     else:
         app = mcp.http_app(stateless_http=True)
+        app.add_middleware(BearerAuthMiddleware)
         app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],

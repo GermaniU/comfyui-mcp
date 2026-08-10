@@ -90,6 +90,7 @@ Crea un archivo `.env` o exporta las siguientes variables:
 | `COMFYUI_PUBLIC_URL` | `http://<YOUR_SERVER_IP>:8188` | Base URL pública/LAN para descarga de imágenes. |
 | `MCP_HOST` | `0.0.0.0` | Host binding para el servidor MCP. |
 | `MCP_PORT` | `8201` | Puerto HTTP/SSE del servidor MCP. |
+| `MCP_AUTH_TOKEN` | *(vacío = sin auth)* | Si se define, exige header `Authorization: Bearer <token>` en cada request HTTP/SSE. |
 
 ---
 

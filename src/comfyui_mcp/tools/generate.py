@@ -3,8 +3,13 @@
 import random
 
 from .. import comfy_client, gpu_arbiter, workflow
-from ..config import (ASPECTS, DEFAULT_NEGATIVE, GENERATE_TIMEOUT, PRESETS,
-                      COMFY_PUBLIC_URL)
+from ..config import (
+    ASPECTS,
+    COMFY_PUBLIC_URL,
+    DEFAULT_NEGATIVE,
+    GENERATE_TIMEOUT,
+    PRESETS,
+)
 
 
 def _view_url(filename: str, subfolder: str, img_type: str) -> str:
@@ -54,7 +59,7 @@ async def generate_image(
         )
         prompt_id = await comfy_client.submit_prompt(wf)
         entry = await comfy_client.wait_for_result(prompt_id, GENERATE_TIMEOUT)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return f"Error generando imagen: {type(e).__name__}: {e}"
 
     files = []
@@ -64,11 +69,15 @@ async def generate_image(
             files.append({"filename": img["filename"], "subfolder": sub,
                           "type": img.get("type", "output")})
 
-    if not files:
+    if not entry.get("outputs"):
         return f"Terminó sin imágenes en la salida (prompt_id {prompt_id}) — revisar workflow."
 
-    lines = [f"{len(files)} imagen(es) generada(s) · seed {seed} · {checkpoint} · "
-             f"{width}x{height} · {steps} steps:"]
+    lines = [
+        (
+            f"{len(files)} imagen(es) generada(s) · seed {seed} · {checkpoint} · "
+            f"{width}x{height} · {steps} steps:"
+        )
+    ]
     for f in files:
         lines.append(f"  · {f['filename']} → {_view_url(f['filename'], f['subfolder'], f['type'])}")
     return "\n".join(lines)
