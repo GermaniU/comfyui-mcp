@@ -28,8 +28,28 @@ mcp = FastMCP("comfyui-image")
         "Prompt en inglés funciona mejor."
     ),
 )
-async def _generate_image(**kwargs) -> str:
-    return await generate_image(**kwargs)
+async def _generate_image(
+    prompt: str,
+    preset: str = "producto",
+    aspect: str = "1:1",
+    negative_prompt: str | None = None,
+    seed: int | None = None,
+    batch: int = 1,
+    checkpoint: str | None = None,
+    lora: str | None = None,
+    lora_strength: float = 0.8,
+    steps: int | None = None,
+    cfg: float | None = None,
+    filename_prefix: str = "mcp",
+    detail_face: bool = False,
+) -> str:
+    return await generate_image(
+        prompt=prompt, preset=preset, aspect=aspect,
+        negative_prompt=negative_prompt, seed=seed, batch=batch,
+        checkpoint=checkpoint, lora=lora, lora_strength=lora_strength,
+        steps=steps, cfg=cfg, filename_prefix=filename_prefix,
+        detail_face=detail_face,
+    )
 
 
 @mcp.tool(
@@ -65,8 +85,26 @@ async def _comfy_view_url(filename: str, subfolder: str = "", img_type: str = "o
         "Útil para iterar un arte sin partir de cero o generar variaciones de memes."
     ),
 )
-async def _img2img(**kwargs) -> str:
-    return await img2img(**kwargs)
+async def _img2img(
+    image_filename: str,
+    prompt: str = "",
+    negative_prompt: str | None = None,
+    preset: str = "realista",
+    denoise: float = 0.55,
+    seed: int | None = None,
+    checkpoint: str | None = None,
+    lora: str | None = None,
+    lora_strength: float = 0.8,
+    steps: int | None = None,
+    cfg: float | None = None,
+    filename_prefix: str = "mcp-i2i",
+) -> str:
+    return await img2img(
+        image_filename=image_filename, prompt=prompt,
+        negative_prompt=negative_prompt, preset=preset, denoise=denoise,
+        seed=seed, checkpoint=checkpoint, lora=lora, lora_strength=lora_strength,
+        steps=steps, cfg=cfg, filename_prefix=filename_prefix,
+    )
 
 
 def main():
