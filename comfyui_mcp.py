@@ -18,7 +18,8 @@ gracefully si está idle, libera VRAM, y lo re-arranca al terminar.
 También puede arrancar comfyui.service si no está corriendo.
 
 Configuración:
-  COMFYUI_URL         default http://127.0.0.1:8188 (loopback, corre en la misma máquina)
+  COMFYUI_URL         default http://127.0.0.1:8188 (loopback, para hablar con ComfyUI)
+  COMFYUI_PUBLIC_URL  default http://192.168.68.108:8188 (IP LAN, para URLs descargables remototo)
   COMFYUI_OUTPUT_DIR  default ~/stack/comfyui/output (las imágenes quedan EN Pop!_OS;
                        el caller recibe filename+subfolder y puede pedirlas por /view
                        de ComfyUI directo, o vía un futuro endpoint de descarga)
@@ -39,6 +40,7 @@ from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
 COMFY_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
+COMFYUI_PUBLIC_URL = os.getenv("COMFYUI_PUBLIC_URL", "http://192.168.68.108:8188")
 COMFYUI_SERVICE = "comfyui.service"
 GPU_BROKER = os.path.expanduser("~/stack/gpu-broker/gpu-broker.sh")
 _WAKE_TIMEOUT_S = 90
@@ -286,7 +288,7 @@ async def generate_image(
     lines = [f"{len(files)} imagen(es) generada(s) · seed {seed} · {checkpoint} · "
              f"{width}x{height} · {steps} steps:"]
     for f in files:
-        view_url = f"{COMFY_URL}/view?filename={f['filename']}&subfolder={f['subfolder']}&type={f['type']}"
+        view_url = f"{COMFYUI_PUBLIC_URL}/view?filename={f['filename']}&subfolder={f['subfolder']}&type={f['type']}"
         lines.append(f"  · {f['filename']} → {view_url}")
     return "\n".join(lines)
 
