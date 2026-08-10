@@ -1,31 +1,32 @@
-# comfyui-mcp
-
-[![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![MCP Protocol](https://img.shields.io/badge/MCP-HTTP%2FSSE-green.svg)](https://modelcontextprotocol.io/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-v2.0+-purple.svg)](https://github.com/jlowin/fastmcp)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/GermaniU/comfyui-mcp)
-
 <p align="center">
-  <img src="docs/assets/banner.jpg" alt="ComfyUI MCP Architecture & Banner" width="100%" />
+  <img src="docs/assets/og-image.png" alt="ComfyUI MCP — Image Generation for AI Agents via Model Context Protocol" width="720">
 </p>
 
-**Professional MCP HTTP/SSE server for image generation using ComfyUI (SDXL / RTX 3060).**
+**English** · [Español](README.md)
 
-`comfyui-mcp` acts as a decoupled middleware adapter that exposes ComfyUI inference capabilities to any client or gateway supporting the **Model Context Protocol (MCP)** across the local network, without requiring local PyTorch environments or heavy model downloads on client machines.
+# ComfyUI MCP — Image Generation for AI Agents via Model Context Protocol (MCP)
 
-[Spanish Version (README.md)](README.md) | [Architecture](docs/ARCHITECTURE.md) | [Backend Server Setup](docs/SERVER_SETUP.md)
+> **Connect SDXL image generation capabilities to any AI agent on your network.**
+> Open-source MCP server exposing ComfyUI inference (SDXL / RTX 3060) to Claude Code, Cursor, Windsurf, Hermes Gateway, and any client compatible with [Model Context Protocol](https://modelcontextprotocol.io). FastMCP HTTP/SSE + GPU Arbiter, **zero client dependencies, 100% on your hardware**.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Streamable_HTTP%2FSSE-green)](https://modelcontextprotocol.io)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![CI](https://github.com/GermaniU/comfyui-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/GermaniU/comfyui-mcp/actions/workflows/ci.yml)
+[![FastMCP](https://img.shields.io/badge/FastMCP-v2.0+-purple.svg)](https://github.com/jlowin/fastmcp)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+**Tags:** `mcp-server` · `comfyui` · `sdxl` · `image-generation` · `ai-agents` · `fastmcp` · `claude-code` · `cursor` · `hermes-gateway` · `gpu-arbiter` · `local-first` · `self-hosted`
 
 ---
 
-## ⚡ Key Features
+## 💡 Why It Exists
 
-- 🎨 **txt2img & img2img Generation**: Native support for SDXL prompts with programmatic configuration of aspect ratios, sampling steps, denoising, and random seeds.
-- 🎯 **Optimized Presets**: Pre-configured profiles tailored for common use cases (`producto`, `realista`, `rapido`, `anime`).
-- 🧠 **GPU Arbiter (VRAM Switching)**: Automatic VRAM coordination with LLM servers (`llama-server`) via systemd to maximize 12GB GPU utilization.
-- 🌐 **Decoupled HTTP/SSE Transport**: Exposes MCP tools over HTTP on port `8201`, allowing macOS, Linux, or Windows clients to consume image generation capabilities seamlessly.
-- 🖼️ **Direct Image Delivery**: Resolves public/LAN URLs for immediate client downloading without shared file systems.
-- 🔍 **Health Monitoring & Model Discovery**: Inspect GPU VRAM utilization, execution queue, available checkpoints, and LoRAs.
+Generating images in multi-agent environments usually requires installing heavy PyTorch dependencies, dedicated GPUs, and complex setups on every client machine. **ComfyUI MCP** solves this by acting as a decoupled HTTP/SSE middleware adapter:
+
+- 🚀 **Zero Local Installation**: Any client or gateway consumes image generation over HTTP/SSE on port `8201` without installing PyTorch or downloading SDXL models locally.
+- 🧠 **Smart GPU Arbiter**: Automatically switches between `llama-server` (LLMs) and `ComfyUI` on 12GB GPUs (RTX 3060) without VRAM collisions.
+- 🎯 **Professional Presets**: Production-ready generation out of the box with presets like `producto` (RealVisXL V4.0) or `realista` (Juggernaut XL).
 
 ---
 
@@ -34,7 +35,7 @@
 > ⚠️ **IMPORTANT: System Boundaries**
 >
 > `comfyui-mcp` is **strictly the MCP transport & interface layer**. It does NOT include the ComfyUI inference engine or large model weight files.
-> For host server deployment instructions, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+> For host server deployment instructions, see [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```
  +-------------------------------------------------------+
