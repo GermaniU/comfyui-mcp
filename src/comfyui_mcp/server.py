@@ -1,5 +1,6 @@
 """FastMCP server + entry point (stdio/HTTP)."""
 
+import hmac
 import os
 import sys
 
@@ -23,8 +24,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         token = os.getenv("MCP_AUTH_TOKEN")
         if token:
             header = request.headers.get("authorization", "")
-            expected = f"Bearer {token}"
-            if header != expected:
+            if not hmac.compare_digest(header.encode(), f"Bearer {token}".encode()):
                 return JSONResponse({"error": "unauthorized"}, status_code=401)
         return await call_next(request)
 
@@ -50,7 +50,7 @@ async def _generate_image(
     batch: int = 1,
     checkpoint: str | None = None,
     lora: str | None = None,
-    lora_strength: float = 0.8,
+    lora_strength: float | None = None,
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp",
@@ -86,7 +86,7 @@ async def _comfy_health() -> str:
     description="Devuelve la URL LAN de descarga directa para una imagen ya generada (por filename).",
 )
 async def _comfy_view_url(filename: str, subfolder: str = "", img_type: str = "output") -> str:
-    return await comfy_view_url(filename, subfolder, img_type)
+    return comfy_view_url(filename, subfolder, img_type)
 
 
 @mcp.tool(
@@ -107,7 +107,7 @@ async def _img2img(
     seed: int | None = None,
     checkpoint: str | None = None,
     lora: str | None = None,
-    lora_strength: float = 0.8,
+    lora_strength: float | None = None,
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp-i2i",
