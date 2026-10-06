@@ -9,7 +9,7 @@ from ..config import (
     PRESETS,
 )
 from .generate import resolve_preset
-from .view import image_lines
+from .view import image_lines, thumbnails
 
 
 async def img2img(
@@ -25,7 +25,8 @@ async def img2img(
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp-i2i",
-) -> str:
+    preview: bool = False,
+) -> str | list:
     """Variar una imagen existente en el output de ComfyUI usando img2img.
     image_filename: nombre del archivo ya generado (ej: test_00001_.png).
     denoise: 0.0 = imagen idéntica, 1.0 = imagen completamente nueva. 0.3-0.7 recomendado.
@@ -48,7 +49,7 @@ async def img2img(
             prompt=prompt, negative=negative_prompt or DEFAULT_NEGATIVE,
             # LoadImage resuelve el sufijo " [output]" contra output/ de ComfyUI
             image_path=f"{image_filename} [output]", denoise=denoise,
-            seed=seed, filename_prefix=filename_prefix, **params,
+            seed=seed, filename_prefix=filename_prefix, preview=preview, **params,
         )
         prompt_id = await comfy_client.submit_prompt(wf)
         entry = await comfy_client.wait_for_result(prompt_id, GENERATE_TIMEOUT)
@@ -60,4 +61,5 @@ async def img2img(
         f"{len(lines)} imagen(es) generada(s) · img2img · base={image_filename} · "
         f"denoise={denoise} · seed={seed} · {params['checkpoint']} · {params['steps']} steps:"
     )
-    return "\n".join([header, *lines])
+    text = "\n".join([header, *lines])
+    return [text, *await thumbnails(entry)] if preview else text

@@ -89,3 +89,12 @@ async def object_info(node_class: str) -> dict:
         r = await c.get(f"/object_info/{node_class}")
         r.raise_for_status()
         return r.json()
+
+
+async def view_jpeg(filename: str, subfolder: str, img_type: str) -> bytes:
+    """Imagen vía /view, convertida a JPEG por ComfyUI (param preview)."""
+    async with _client() as c:
+        r = await c.get("/view", params={"filename": filename, "subfolder": subfolder,
+                                         "type": img_type, "preview": "jpeg;80"})
+        r.raise_for_status()
+        return r.content

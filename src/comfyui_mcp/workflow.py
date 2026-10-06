@@ -43,7 +43,7 @@ def build_txt2img(
     prompt: str, negative: str, checkpoint: str, width: int, height: int,
     steps: int, cfg: float, sampler: str, scheduler: str, seed: int,
     batch: int, lora: str | None, lora_strength: float,
-    filename_prefix: str, detail_face: bool = False,
+    filename_prefix: str, detail_face: bool = False, preview: bool = False,
 ) -> dict:
     """Workflow txt2img. Con lora opcional entre checkpoint y sampler."""
     wf, model_ref, clip_ref = _base_nodes(checkpoint, lora, lora_strength)
@@ -55,6 +55,8 @@ def build_txt2img(
     if detail_face:
         _add_face_detailer(wf, model_ref, clip_ref, seed, steps, cfg,
                            sampler, scheduler)
+    if preview:
+        _add_preview(wf)
     return wf
 
 
@@ -62,7 +64,7 @@ def build_img2img(
     prompt: str, negative: str, checkpoint: str, image_path: str,
     denoise: float, steps: int, cfg: float, sampler: str, scheduler: str,
     seed: int, lora: str | None, lora_strength: float,
-    filename_prefix: str,
+    filename_prefix: str, preview: bool = False,
 ) -> dict:
     """Workflow img2img: carga una imagen, la codifica a latent y la varía con denoise."""
     wf, model_ref, clip_ref = _base_nodes(checkpoint, lora, lora_strength)
@@ -73,7 +75,17 @@ def build_img2img(
                    cfg, sampler, scheduler, ["13", 0])
     wf["3"]["inputs"]["denoise"] = denoise
     wf["9"]["inputs"]["filename_prefix"] = filename_prefix
+    if preview:
+        _add_preview(wf)
     return wf
+
+
+def _add_preview(wf: dict) -> None:
+    # Copia a la mitad de lo que guarda SaveImage (post FaceDetailer si lo
+    # hay); PreviewImage la deja en temp/ para devolverla como miniatura.
+    wf["15"] = {"class_type": "ImageScaleBy", "inputs": {
+        "image": wf["9"]["inputs"]["images"], "upscale_method": "area", "scale_by": 0.5}}
+    wf["16"] = {"class_type": "PreviewImage", "inputs": {"images": ["15", 0]}}
 
 
 def _add_face_detailer(wf: dict, model_ref: list, clip_ref: list, seed: int,
