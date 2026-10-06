@@ -97,28 +97,31 @@ Create a `.env` file or export environment variables:
 ## 🛠️ MCP Tool Reference
 
 ### 1. `generate_image` (txt2img)
-Generates an image from a text prompt using SDXL.
+Generates images from a text prompt using SDXL.
 
 - **Parameters**:
-  - `prompt` (*string*, required): Detailed description of the image to generate.
-  - `negative_prompt` (*string*, optional): Concepts to exclude. Default: `"ugly, blurry, low quality, distorted"`.
-  - `preset` (*string*, optional): Preset profile (`producto`, `realista`, `rapido`, `anime`). Default: `"realista"`.
-  - `aspect_ratio` (*string*, optional): Target aspect ratio (`1:1`, `16:9`, `9:16`, `4:3`, `3:4`). Default: `"1:1"`.
-  - `seed` (*integer*, optional): Random seed (-1 for random). Default: `-1`.
-  - `steps` (*integer*, optional): Sampler steps (overrides preset default).
-  - `cfg` (*float*, optional): CFG scale.
+  - `prompt` (*string*, required): Image description (English works best).
+  - `preset` (*string*, optional): `producto`, `realista`, `rapido` or `anime`. Default: `"producto"`.
+  - `aspect` (*string*, optional): `1:1`, `4:5`, `5:4`, `9:16`, `16:9`, `3:2`, `2:3` (~1MP). Default: `"1:1"`.
+  - `negative_prompt` (*string*, optional): Concepts to exclude. Default: generic quality negative.
+  - `seed` (*integer*, optional): Seed for reproducibility. Default: random.
+  - `batch` (*integer*, optional): Images per call (1-4). Default: `1`.
+  - `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg` (optional): Override the preset values.
+  - `filename_prefix` (*string*, optional): Output file prefix. Default: `"mcp"`.
+  - `detail_face` (*bool*, optional): FaceDetailer pass (requires Impact Pack). Default: `false`.
 
 ### 2. `img2img`
-Transforms an existing image using a new prompt and denoise strength.
+Varies an already generated image (in ComfyUI's `output/`) with a denoise strength.
 
 - **Parameters**:
-  - `image_source` (*string*, required): Public URL or Base64 string of input image.
-  - `prompt` (*string*, required): Transformation instruction.
-  - `denoise` (*float*, optional): Denoising strength (`0.1` to `1.0`). Default: `0.7`.
-  - `preset` (*string*, optional): Preset checkpoint/sampler profile. Default: `"realista"`.
+  - `image_filename` (*string*, required): Generated file name (e.g. `mcp_00001_.png`).
+  - `prompt` (*string*, optional): Transformation instruction. Empty = pure visual variation.
+  - `denoise` (*float*, optional): `0.0` identical, `1.0` completely new. Default: `0.55`.
+  - `preset` (*string*, optional): Default: `"realista"`.
+  - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix` (optional).
 
 ### 3. `list_models`
-Returns available checkpoints, LoRAs, and samplers installed on the ComfyUI instance.
+Returns available checkpoints, LoRAs, and presets on the ComfyUI instance.
 
 ### 4. `comfy_health`
 Retrieves backend engine health: ComfyUI version, GPU VRAM usage, and queue length.
@@ -132,10 +135,10 @@ Constructs the direct LAN download URL for a generated image given its `filename
 
 | Preset | Associated Checkpoint | Steps | CFG | Primary Use Case |
 |--------|----------------------|-------|-----|------------------|
-| `producto` | `RealVisXL_V4.0.safetensors` | 30 | 7.0 | Photorealistic product & commercial photography. |
-| `realista` | `juggernautXL_ragnarokBy.safetensors` | 30 | 7.0 | High quality general photorealism (Default). |
-| `rapido` | `juggernautXL_ragnarokBy.safetensors` | 6 | 2.0 | Draft previews in ~5 seconds. |
-| `anime` | `animagine-xl-3.1.safetensors` | 28 | 7.0 | Digital illustration and anime styles. |
+| `producto` | `RealVisXL_V4.0.safetensors` | 30 | 5.5 | Photorealistic product & commercial photography (Default). |
+| `realista` | `juggernautXL_ragnarokBy.safetensors` | 30 | 5.0 | Versatile photorealism (scenes, people, environments). |
+| `rapido` | `juggernautXL_ragnarokBy.safetensors` + SDXL-Lightning LoRA | 6 | 1.5 | Draft previews in ~5 seconds. |
+| `anime` | `animagine-xl-3.1.safetensors` | 28 | 7.0 | Anime-style illustration (checkpoint not shipped on the server). |
 
 ---
 

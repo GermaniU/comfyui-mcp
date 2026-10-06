@@ -1,14 +1,15 @@
 [Unit]
-Description=comfyui-mcp — MCP HTTP server (generate_image/list_models/comfy_health), puerto 8201
+Description=comfyui-mcp — MCP HTTP server para ComfyUI, puerto 8201
 After=network.target
 
 [Service]
 Type=simple
-User=g3rm4n1
-WorkingDirectory=/home/g3rm4n1/Sites/comfyui-mcp
+User=<YOUR_USER>
+WorkingDirectory=<HOME>/Sites/comfyui-mcp
 Environment=COMFYUI_URL=http://127.0.0.1:8188
+Environment=COMFYUI_PUBLIC_URL=http://<YOUR_SERVER_IP>:8188
 Environment=MCP_PORT=8201
-ExecStart=/home/g3rm4n1/Sites/comfyui-mcp/venv/bin/python /home/g3rm4n1/Sites/comfyui-mcp/comfyui_mcp.py
+ExecStart=<HOME>/Sites/comfyui-mcp/.venv/bin/comfyui-mcp
 Restart=on-failure
 RestartSec=5
 

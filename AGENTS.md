@@ -15,10 +15,11 @@ src/comfyui_mcp/
 ├── config.py          # env vars, presets, aspects, constantes
 ├── comfy_client.py    # HTTP client thin a ComfyUI (system_stats, prompt, history, view)
 ├── gpu_arbiter.py     # ensure_comfyui_running + wake
-├── workflow.py        # build_workflow (txt2img + img2img + upscale)
-├── tools/             # generate_image, list_models, comfy_health, comfy_view_url, history
+├── workflow.py        # build_txt2img + build_img2img (+ FaceDetailer opcional)
+├── tools/             # generate_image, img2img, list_models, comfy_health, comfy_view_url
 │   ├── __init__.py
 │   ├── generate.py
+│   ├── img2img.py
 │   ├── models.py
 │   ├── health.py
 │   └── view.py
@@ -41,23 +42,26 @@ tests/                 # pytest por módulo
 | Tool | Descripción |
 |------|-------------|
 | `generate_image` | txt2img con presets (producto/realista/rapido/anime) o params manuales |
-| `list_models` | Checkpoints, loras y samplers disponibles |
+| `img2img` | Variación de una imagen ya generada con denoise controlado |
+| `list_models` | Checkpoints, loras y presets disponibles |
 | `comfy_health` | Estado de ComfyUI: versión, VRAM, cola |
+| `comfy_view_url` | URL LAN de descarga de una imagen generada |
 
 ## Configuración (env vars)
 
 | Env var | Default | Descripción |
 |---------|---------|-------------|
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | URL de ComfyUI (loopback) |
-| `COMFYUI_PUBLIC_URL` | `http://192.168.68.108:8188` | URL LAN para descarga directa de imágenes |
+| `COMFYUI_PUBLIC_URL` | `http://localhost:8188` | URL LAN para descarga directa de imágenes |
 | `MCP_PORT` | `8201` | Puerto del MCP server |
 | `MCP_HOST` | `0.0.0.0` | Host binding |
+| `MCP_AUTH_TOKEN` | (vacío) | Bearer token opcional; vacío = sin auth |
 
 ## Deploy
 
 - systemd: `comfyui-mcp.service` (puerto 8201)
 - El servicio corre desde `~/stack/comfyui/` (runtime), el repo git desde `~/Sites/comfyui-mcp/` (fuente). Mantener sincronizados.
-- GPU Broker en `ExecStartPre` del service para el switch de GPU con llama-server.
+- GPU Broker en `ExecStartPre` de `comfyui.service` para el switch de GPU con llama-server; el MCP lo dispara al arrancar ese service.
 
 ## Flujo de trabajo
 
