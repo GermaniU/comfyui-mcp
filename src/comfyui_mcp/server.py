@@ -67,7 +67,10 @@ async def _generate_image(
 
 @mcp.tool(
     name="list_models",
-    description="Lista checkpoints, loras y samplers disponibles en ComfyUI.",
+    description=(
+        "Lista checkpoints, loras y presets disponibles en ComfyUI. Si ComfyUI "
+        "está dormido devuelve solo los presets, sin despertarlo."
+    ),
 )
 async def _list_models() -> str:
     return await list_models()
@@ -132,7 +135,7 @@ def main():
         app.add_middleware(BearerAuthMiddleware)
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=os.getenv("MCP_CORS_ORIGINS", "*").split(","),
             allow_methods=["*"],
             allow_headers=["*"],
         )

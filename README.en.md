@@ -91,6 +91,9 @@ Create a `.env` file or export environment variables:
 | `MCP_HOST` | `0.0.0.0` | Host binding for the MCP server. |
 | `MCP_PORT` | `8201` | HTTP/SSE port for the MCP server. |
 | `MCP_AUTH_TOKEN` | *(empty = no auth)* | If set, requires `Authorization: Bearer <token>` header on every HTTP/SSE request. |
+| `MCP_CORS_ORIGINS` | `*` | Comma-separated allowed CORS origins. Only affects browser-based clients. |
+
+> **Security:** without `MCP_AUTH_TOKEN`, any host on the LAN —or a web page open in a LAN browser, with CORS `*`— can generate images and tie up the GPU. Setting a token is recommended unless the network is fully trusted.
 
 ---
 

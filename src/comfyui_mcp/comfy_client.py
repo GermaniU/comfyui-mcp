@@ -21,14 +21,27 @@ async def reachable() -> bool:
         return False
 
 
+def _rejection(r: httpx.Response) -> str:
+    """Resume los node_errors de un 400 de /prompt: qué nodo, qué input y,
+    para valores fuera de lista, cuáles son válidos (viene en details)."""
+    try:
+        body = r.json()
+    except ValueError:
+        return f"HTTP {r.status_code}: {r.text[:500]}"
+    errors = [
+        f"{node['class_type']}: {e['message']}" + (f" — {e['details']}" if e.get("details") else "")
+        for node in body.get("node_errors", {}).values()
+        for e in node["errors"]
+    ]
+    return "; ".join(errors) or body["error"]["message"]
+
+
 async def submit_prompt(workflow: dict) -> str:
     """Envía un workflow a ComfyUI y devuelve el prompt_id."""
     async with _client() as c:
         r = await c.post("/prompt", json={"prompt": workflow})
         if r.status_code != 200:
-            raise RuntimeError(
-                f"ComfyUI rechazó el workflow (HTTP {r.status_code}): {r.text[:500]}"
-            )
+            raise RuntimeError(f"ComfyUI rechazó el workflow: {_rejection(r)}")
         return r.json()["prompt_id"]
 
 

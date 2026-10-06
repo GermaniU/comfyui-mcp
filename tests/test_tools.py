@@ -6,6 +6,7 @@ from comfyui_mcp import comfy_client, gpu_arbiter
 from comfyui_mcp.config import COMFY_PUBLIC_URL
 from comfyui_mcp.tools import img2img as img2img_tool
 from comfyui_mcp.tools.generate import generate_image, resolve_preset
+from comfyui_mcp.tools.models import list_models
 from comfyui_mcp.tools.view import comfy_view_url
 
 
@@ -84,3 +85,36 @@ async def test_timeout_saca_el_prompt_de_la_cola(monkeypatch):
     else:
         raise AssertionError("debió vencer")
     assert posts == ["/queue", "/interrupt"]
+
+
+async def test_rechazo_nombra_nodo_y_valores_validos(monkeypatch):
+    cuerpo = {
+        "error": {"type": "prompt_outputs_failed_validation",
+                  "message": "Prompt outputs failed validation"},
+        "node_errors": {"4": {"class_type": "CheckpointLoaderSimple", "errors": [{
+            "type": "value_not_in_list", "message": "Value not in list",
+            "details": "ckpt_name: 'anime.safetensors' not in ['real.safetensors']"}]}},
+    }
+    monkeypatch.setattr(comfy_client, "_client", lambda timeout=None: httpx.AsyncClient(
+        base_url="http://comfy",
+        transport=httpx.MockTransport(lambda r: httpx.Response(400, json=cuerpo))))
+    try:
+        await comfy_client.submit_prompt({})
+    except RuntimeError as e:
+        msg = str(e)
+    assert "CheckpointLoaderSimple: Value not in list" in msg
+    assert "not in ['real.safetensors']" in msg
+
+
+async def test_list_models_no_despierta_comfyui(monkeypatch):
+    async def dormido():
+        return False
+
+    async def no_despertar():
+        raise AssertionError("list_models no debe arrancar ComfyUI")
+
+    monkeypatch.setattr(comfy_client, "reachable", dormido)
+    monkeypatch.setattr(gpu_arbiter, "ensure_comfyui_running", no_despertar)
+    salida = await list_models()
+    assert "rapido" in salida
+    assert "ComfyUI dormido" in salida
