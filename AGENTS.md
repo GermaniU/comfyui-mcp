@@ -56,6 +56,7 @@ tests/                 # pytest por módulo
 | `MCP_PORT` | `8201` | Puerto del MCP server |
 | `MCP_HOST` | `0.0.0.0` | Host binding |
 | `MCP_AUTH_TOKEN` | (vacío) | Bearer token opcional; vacío = sin auth |
+| `MCP_CORS_ORIGINS` | `*` | Orígenes CORS permitidos, separados por coma |
 
 ## Deploy
 

@@ -9,7 +9,7 @@ from ..config import (
     GENERATE_TIMEOUT,
     PRESETS,
 )
-from .view import image_lines
+from .view import image_lines, thumbnails
 
 
 def resolve_preset(preset: str, checkpoint: str | None, lora: str | None,
@@ -43,7 +43,8 @@ async def generate_image(
     cfg: float | None = None,
     filename_prefix: str = "mcp",
     detail_face: bool = False,
-) -> str:
+    preview: bool = False,
+) -> str | list:
     wake_err = await gpu_arbiter.ensure_comfyui_running()
     if wake_err:
         return f"ComfyUI no disponible: {wake_err}"
@@ -61,7 +62,8 @@ async def generate_image(
         wf = workflow.build_txt2img(
             prompt=prompt, negative=negative_prompt or DEFAULT_NEGATIVE,
             width=width, height=height, seed=seed, batch=batch,
-            filename_prefix=filename_prefix, detail_face=detail_face, **params,
+            filename_prefix=filename_prefix, detail_face=detail_face,
+            preview=preview, **params,
         )
         prompt_id = await comfy_client.submit_prompt(wf)
         entry = await comfy_client.wait_for_result(prompt_id, GENERATE_TIMEOUT)
@@ -73,4 +75,5 @@ async def generate_image(
         f"{len(lines)} imagen(es) generada(s) · seed {seed} · {params['checkpoint']} · "
         f"{width}x{height} · {params['steps']} steps:"
     )
-    return "\n".join([header, *lines])
+    text = "\n".join([header, *lines])
+    return [text, *await thumbnails(entry)] if preview else text

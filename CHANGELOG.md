@@ -7,6 +7,15 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+### Añadido
+- `preview` en `generate_image` e `img2img`: devuelve una miniatura JPEG (~512px) junto al texto para que el modelo vea el resultado. Sin dependencias nuevas: la escala ComfyUI (`ImageScaleBy` + `PreviewImage`) y la convierte `/view?preview=jpeg`.
+
+### Cambiado
+- Los rechazos de ComfyUI nombran el nodo, el input y los valores válidos (ej: checkpoint inexistente) en vez de volcar el JSON crudo.
+- `list_models` ya no despierta ComfyUI: si está dormido devuelve los presets, sin sacar al LLM de la GPU.
+- `MCP_CORS_ORIGINS` permite restringir los orígenes CORS (default `*`).
+- `requires-python` pasa a `>=3.11`, en línea con docs y CI.
+
 ### Corregido
 - El preset `rapido` aplica el LoRA de Lightning a la fuerza del preset (1.0) en vez de 0.8.
 - `detail_face` usa los steps/cfg/scheduler del preset; con `rapido` quemaba las caras.

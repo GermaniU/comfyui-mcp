@@ -38,8 +38,10 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         "(pedir con comfy_view_url para la URL directa de descarga). La primera "
         "generación con un checkpoint tarda ~1 min extra por carga del modelo, más "
         "~10-30s si hay que despertar el servicio (switch de GPU con el LLM). "
-        "Prompt en inglés funciona mejor."
+        "Prompt en inglés funciona mejor. preview=true devuelve además una "
+        "miniatura JPEG (~512px) para ver el resultado; solo en clientes con visión."
     ),
+    output_schema=None,
 )
 async def _generate_image(
     prompt: str,
@@ -55,19 +57,23 @@ async def _generate_image(
     cfg: float | None = None,
     filename_prefix: str = "mcp",
     detail_face: bool = False,
-) -> str:
+    preview: bool = False,
+) -> str | list:
     return await generate_image(
         prompt=prompt, preset=preset, aspect=aspect,
         negative_prompt=negative_prompt, seed=seed, batch=batch,
         checkpoint=checkpoint, lora=lora, lora_strength=lora_strength,
         steps=steps, cfg=cfg, filename_prefix=filename_prefix,
-        detail_face=detail_face,
+        detail_face=detail_face, preview=preview,
     )
 
 
 @mcp.tool(
     name="list_models",
-    description="Lista checkpoints, loras y samplers disponibles en ComfyUI.",
+    description=(
+        "Lista checkpoints, loras y presets disponibles en ComfyUI. Si ComfyUI "
+        "está dormido devuelve solo los presets, sin despertarlo."
+    ),
 )
 async def _list_models() -> str:
     return await list_models()
@@ -95,8 +101,10 @@ async def _comfy_view_url(filename: str, subfolder: str = "", img_type: str = "o
         "Varía una imagen ya generada usando img2img. Pasar image_filename (ej: "
         "test_00001_.png) y denoise (0.0=idéntica, 1.0=completamente nueva, "
         "0.3-0.7 recomendado). Si prompt está vacío, hace variación visual pura. "
-        "Útil para iterar un arte sin partir de cero o generar variaciones de memes."
+        "Útil para iterar un arte sin partir de cero o generar variaciones de memes. "
+        "preview=true devuelve además una miniatura JPEG; solo en clientes con visión."
     ),
+    output_schema=None,
 )
 async def _img2img(
     image_filename: str,
@@ -111,12 +119,13 @@ async def _img2img(
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp-i2i",
-) -> str:
+    preview: bool = False,
+) -> str | list:
     return await img2img(
         image_filename=image_filename, prompt=prompt,
         negative_prompt=negative_prompt, preset=preset, denoise=denoise,
         seed=seed, checkpoint=checkpoint, lora=lora, lora_strength=lora_strength,
-        steps=steps, cfg=cfg, filename_prefix=filename_prefix,
+        steps=steps, cfg=cfg, filename_prefix=filename_prefix, preview=preview,
     )
 
 
@@ -132,7 +141,7 @@ def main():
         app.add_middleware(BearerAuthMiddleware)
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=os.getenv("MCP_CORS_ORIGINS", "*").split(","),
             allow_methods=["*"],
             allow_headers=["*"],
         )

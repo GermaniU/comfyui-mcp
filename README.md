@@ -91,6 +91,9 @@ Crea un archivo `.env` o exporta las siguientes variables:
 | `MCP_HOST` | `0.0.0.0` | Host binding para el servidor MCP. |
 | `MCP_PORT` | `8201` | Puerto HTTP/SSE del servidor MCP. |
 | `MCP_AUTH_TOKEN` | *(vacío = sin auth)* | Si se define, exige header `Authorization: Bearer <token>` en cada request HTTP/SSE. |
+| `MCP_CORS_ORIGINS` | `*` | Orígenes CORS permitidos, separados por coma. Solo afecta a clientes que corren en un navegador. |
+
+> **Seguridad:** sin `MCP_AUTH_TOKEN`, cualquier equipo de la LAN —o una página web abierta en un navegador de la LAN, con CORS `*`— puede generar imágenes y ocupar la GPU. Definir un token es lo recomendado salvo en redes totalmente confiables.
 
 ---
 
@@ -109,6 +112,7 @@ Genera imágenes desde un prompt textual usando SDXL.
   - `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg` (opcionales): Sobreescriben los valores del preset.
   - `filename_prefix` (*string*, opcional): Prefijo del archivo de salida. Default: `"mcp"`.
   - `detail_face` (*bool*, opcional): Pasada de FaceDetailer (requiere Impact Pack). Default: `false`.
+  - `preview` (*bool*, opcional): Devuelve además una miniatura JPEG (~512px) para que el modelo vea el resultado. Solo para clientes con visión. Default: `false`.
 
 ### 2. `img2img` (Image-to-Image)
 Varía una imagen ya generada (en `output/` de ComfyUI) con un nivel de denoise.
@@ -118,7 +122,7 @@ Varía una imagen ya generada (en `output/` de ComfyUI) con un nivel de denoise.
   - `prompt` (*string*, opcional): Instrucción de transformación. Vacío = variación visual pura.
   - `denoise` (*float*, opcional): `0.0` idéntica, `1.0` completamente nueva. Default: `0.55`.
   - `preset` (*string*, opcional): Default: `"realista"`.
-  - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix` (opcionales).
+  - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix`, `preview` (opcionales).
 
 ### 3. `list_models`
 Retorna la lista de checkpoints, LoRAs y presets disponibles en la instancia de ComfyUI.

@@ -91,6 +91,9 @@ Create a `.env` file or export environment variables:
 | `MCP_HOST` | `0.0.0.0` | Host binding for the MCP server. |
 | `MCP_PORT` | `8201` | HTTP/SSE port for the MCP server. |
 | `MCP_AUTH_TOKEN` | *(empty = no auth)* | If set, requires `Authorization: Bearer <token>` header on every HTTP/SSE request. |
+| `MCP_CORS_ORIGINS` | `*` | Comma-separated allowed CORS origins. Only affects browser-based clients. |
+
+> **Security:** without `MCP_AUTH_TOKEN`, any host on the LAN —or a web page open in a LAN browser, with CORS `*`— can generate images and tie up the GPU. Setting a token is recommended unless the network is fully trusted.
 
 ---
 
@@ -109,6 +112,7 @@ Generates images from a text prompt using SDXL.
   - `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg` (optional): Override the preset values.
   - `filename_prefix` (*string*, optional): Output file prefix. Default: `"mcp"`.
   - `detail_face` (*bool*, optional): FaceDetailer pass (requires Impact Pack). Default: `false`.
+  - `preview` (*bool*, optional): Also returns a JPEG thumbnail (~512px) so the model can see the result. Vision-capable clients only. Default: `false`.
 
 ### 2. `img2img`
 Varies an already generated image (in ComfyUI's `output/`) with a denoise strength.
@@ -118,7 +122,7 @@ Varies an already generated image (in ComfyUI's `output/`) with a denoise streng
   - `prompt` (*string*, optional): Transformation instruction. Empty = pure visual variation.
   - `denoise` (*float*, optional): `0.0` identical, `1.0` completely new. Default: `0.55`.
   - `preset` (*string*, optional): Default: `"realista"`.
-  - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix` (optional).
+  - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix`, `preview` (optional).
 
 ### 3. `list_models`
 Returns available checkpoints, LoRAs, and presets on the ComfyUI instance.

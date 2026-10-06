@@ -64,3 +64,25 @@ def test_face_detailer_usa_params_del_sampler():
     fd = wf["14"]["inputs"]
     assert (fd["steps"], fd["cfg"], fd["scheduler"]) == (6, 1.5, "sgm_uniform")
     assert wf["9"]["inputs"]["images"] == ["14", 0]
+
+
+def test_preview_escala_lo_que_guarda_saveimage():
+    wf = build_txt2img(
+        prompt="a cat", negative="bad", checkpoint="ckpt.safetensors",
+        width=1024, height=1024, steps=30, cfg=5.0,
+        sampler="dpmpp_2m", scheduler="karras", seed=1, batch=1,
+        lora=None, lora_strength=0.8, filename_prefix="mcp",
+        detail_face=True, preview=True,
+    )
+    assert wf["15"]["inputs"]["image"] == ["14", 0]
+    assert wf["16"] == {"class_type": "PreviewImage", "inputs": {"images": ["15", 0]}}
+
+
+def test_sin_preview_no_hay_nodos_extra():
+    wf = build_img2img(
+        prompt="a cat", negative="bad", checkpoint="ckpt.safetensors",
+        image_path="input.png", denoise=0.6, steps=30, cfg=5.0,
+        sampler="dpmpp_2m", scheduler="karras", seed=1,
+        lora=None, lora_strength=0.8, filename_prefix="mcp",
+    )
+    assert "15" not in wf and "16" not in wf
