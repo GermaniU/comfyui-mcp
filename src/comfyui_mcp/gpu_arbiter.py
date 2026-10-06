@@ -36,13 +36,13 @@ async def ensure_comfyui_running() -> str | None:
             return None
         await asyncio.sleep(_WAKE_POLL_S)
         if time.time() - last_start >= _START_FLOOR_S:
-            # El start puede fallar por VRAM ocupada (speaches transcribiendo
-            # la retiene y tiene prioridad en el broker) o quedar rate-blocked;
+            # El start puede fallar por VRAM ocupada (otro servicio con
+            # prioridad en el broker la retiene) o quedar rate-blocked;
             # reintentar dentro de la ventana da margen a que la VRAM se libere.
             _try_start()
             last_start = time.time()
     return (
         f"{COMFYUI_SERVICE} no respondió tras {_WAKE_TIMEOUT_S}s de arrancarlo. "
-        "Causa típica: el GPU Broker no consiguió la VRAM que pide (una "
-        "transcripción de speaches activa la retiene). Reintentar al terminar."
+        "Causa típica: el GPU Broker no consiguió la VRAM que pide (otro "
+        "servicio la está usando). Reintentar cuando se libere."
     )

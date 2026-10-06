@@ -42,4 +42,4 @@ async def test_error_nombra_la_causa_cuando_no_despierta(monkeypatch):
 
     err = await gpu_arbiter.ensure_comfyui_running()
     assert err is not None
-    assert "speaches" in err and "VRAM" in err
+    assert "GPU Broker" in err and "VRAM" in err
