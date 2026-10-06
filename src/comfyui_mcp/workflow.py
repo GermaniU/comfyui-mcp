@@ -3,14 +3,12 @@
 from typing import Any
 
 
-def _base_nodes(checkpoint: str, width: int, height: int, batch: int,
-                lora: str | None, lora_strength: float) -> tuple[dict, list, list]:
-    """Nodos base: checkpoint loader, latent, y refs de model/clip (con lora opcional)."""
+def _base_nodes(checkpoint: str, lora: str | None,
+                lora_strength: float) -> tuple[dict, list, list]:
+    """Nodos base: checkpoint loader y refs de model/clip (con lora opcional)."""
     wf: dict[str, Any] = {
         "4": {"class_type": "CheckpointLoaderSimple",
               "inputs": {"ckpt_name": checkpoint}},
-        "5": {"class_type": "EmptyLatentImage",
-              "inputs": {"width": width, "height": height, "batch_size": batch}},
     }
     model_ref, clip_ref = ["4", 0], ["4", 1]
     if lora:
@@ -48,13 +46,15 @@ def build_txt2img(
     filename_prefix: str, detail_face: bool = False,
 ) -> dict:
     """Workflow txt2img. Con lora opcional entre checkpoint y sampler."""
-    wf, model_ref, clip_ref = _base_nodes(
-        checkpoint, width, height, batch, lora, lora_strength)
+    wf, model_ref, clip_ref = _base_nodes(checkpoint, lora, lora_strength)
+    wf["5"] = {"class_type": "EmptyLatentImage",
+               "inputs": {"width": width, "height": height, "batch_size": batch}}
     _sampler_nodes(wf, model_ref, clip_ref, prompt, negative, seed, steps,
                    cfg, sampler, scheduler, ["5", 0])
     wf["9"]["inputs"]["filename_prefix"] = filename_prefix
     if detail_face:
-        _add_face_detailer(wf, model_ref, clip_ref, seed, sampler)
+        _add_face_detailer(wf, model_ref, clip_ref, seed, steps, cfg,
+                           sampler, scheduler)
     return wf
 
 
@@ -65,8 +65,7 @@ def build_img2img(
     filename_prefix: str,
 ) -> dict:
     """Workflow img2img: carga una imagen, la codifica a latent y la varía con denoise."""
-    wf, model_ref, clip_ref = _base_nodes(
-        checkpoint, 1024, 1024, 1, lora, lora_strength)
+    wf, model_ref, clip_ref = _base_nodes(checkpoint, lora, lora_strength)
     wf["12"] = {"class_type": "LoadImage", "inputs": {"image": image_path}}
     wf["13"] = {"class_type": "VAEEncode",
                 "inputs": {"pixels": ["12", 0], "vae": ["4", 2]}}
@@ -77,8 +76,10 @@ def build_img2img(
     return wf
 
 
-def _add_face_detailer(wf: dict, model_ref: list, clip_ref: list,
-                       seed: int, sampler: str) -> None:
+def _add_face_detailer(wf: dict, model_ref: list, clip_ref: list, seed: int,
+                       steps: int, cfg: float, sampler: str, scheduler: str) -> None:
+    # Mismos steps/cfg/scheduler que el sampler: con el lora de Lightning
+    # (preset rapido) los valores de SDXL normal queman la cara.
     wf["11"] = {"class_type": "CLIPTextEncode", "inputs": {
         "clip": clip_ref,
         "text": "professional portrait photography, sharp detailed realistic eyes, "
@@ -92,8 +93,8 @@ def _add_face_detailer(wf: dict, model_ref: list, clip_ref: list,
     wf["14"] = {"class_type": "FaceDetailer", "inputs": {
         "image": ["8", 0], "model": model_ref, "clip": clip_ref, "vae": ["4", 2],
         "guide_size": 768, "guide_size_for": True, "max_size": 1024,
-        "seed": seed, "steps": 24, "cfg": 5.0,
-        "sampler_name": sampler, "scheduler": "karras",
+        "seed": seed, "steps": steps, "cfg": cfg,
+        "sampler_name": sampler, "scheduler": scheduler,
         "positive": ["11", 0], "negative": ["12", 0],
         "denoise": 0.45, "feather": 5, "noise_mask": True, "force_inpaint": True,
         "bbox_threshold": 0.5, "bbox_dilation": 10, "bbox_crop_factor": 3.0,

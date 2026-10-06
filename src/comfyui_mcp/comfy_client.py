@@ -1,5 +1,8 @@
 """HTTP client thin a ComfyUI: system_stats, prompt, history, view."""
 
+import asyncio
+import time
+
 import httpx
 
 from .config import COMFY_URL, DEFAULT_TIMEOUT
@@ -30,12 +33,11 @@ async def submit_prompt(workflow: dict) -> str:
 
 
 async def wait_for_result(prompt_id: str, timeout: float) -> dict:
-    """Espera a que termine la generación y devuelve la entrada de /history."""
-    import asyncio
-
-    deadline = asyncio.get_event_loop().time() + timeout
+    """Espera a que termine la generación y devuelve la entrada de /history.
+    Si vence el timeout la saca de la cola para que no siga ocupando la GPU."""
+    deadline = time.monotonic() + timeout
     async with _client(timeout=30.0) as c:
-        while asyncio.get_event_loop().time() < deadline:
+        while time.monotonic() < deadline:
             r = await c.get(f"/history/{prompt_id}")
             r.raise_for_status()
             data = r.json()
@@ -50,6 +52,8 @@ async def wait_for_result(prompt_id: str, timeout: float) -> dict:
                 if entry.get("outputs"):
                     return entry
             await asyncio.sleep(2.0)
+        await c.post("/queue", json={"delete": [prompt_id]})
+        await c.post("/interrupt", json={"prompt_id": prompt_id})
     raise TimeoutError(f"la generación no terminó en {int(timeout)}s")
 
 

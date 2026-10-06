@@ -97,28 +97,31 @@ Crea un archivo `.env` o exporta las siguientes variables:
 ## 🛠️ Herramientas Expuestas (Tool Reference)
 
 ### 1. `generate_image` (txt2img)
-Genera una imagen desde un prompt textual usando SDXL.
+Genera imágenes desde un prompt textual usando SDXL.
 
 - **Parámetros**:
-  - `prompt` (*string*, requerido): Descripción detallada de la imagen a generar.
-  - `negative_prompt` (*string*, opcional): Elementos a excluir. Default: `"ugly, blurry, low quality, distorted"`.
-  - `preset` (*string*, opcional): Preset predefinido (`producto`, `realista`, `rapido`, `anime`). Default: `"realista"`.
-  - `aspect_ratio` (*string*, opcional): Relación de aspecto (`1:1`, `16:9`, `9:16`, `4:3`, `3:4`). Default: `"1:1"`.
-  - `seed` (*integer*, opcional): Semilla para reproducibilidad (-1 para aleatoria). Default: `-1`.
-  - `steps` (*integer*, opcional): Pasos del sampler (sobreescribe preset si se especifica).
-  - `cfg` (*float*, opcional): CFG scale.
+  - `prompt` (*string*, requerido): Descripción de la imagen (en inglés funciona mejor).
+  - `preset` (*string*, opcional): `producto`, `realista`, `rapido` o `anime`. Default: `"producto"`.
+  - `aspect` (*string*, opcional): `1:1`, `4:5`, `5:4`, `9:16`, `16:9`, `3:2`, `2:3` (~1MP). Default: `"1:1"`.
+  - `negative_prompt` (*string*, opcional): Elementos a excluir. Default: negativo genérico de calidad.
+  - `seed` (*integer*, opcional): Semilla para reproducibilidad. Default: aleatoria.
+  - `batch` (*integer*, opcional): Imágenes por llamada (1-4). Default: `1`.
+  - `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg` (opcionales): Sobreescriben los valores del preset.
+  - `filename_prefix` (*string*, opcional): Prefijo del archivo de salida. Default: `"mcp"`.
+  - `detail_face` (*bool*, opcional): Pasada de FaceDetailer (requiere Impact Pack). Default: `false`.
 
 ### 2. `img2img` (Image-to-Image)
-Transforma una imagen existente aplicando un nuevo prompt y nivel de denoise.
+Varía una imagen ya generada (en `output/` de ComfyUI) con un nivel de denoise.
 
 - **Parámetros**:
-  - `image_source` (*string*, requerido): URL pública o cadena Base64 de la imagen de entrada.
-  - `prompt` (*string*, requerido): Instrucción de transformación.
-  - `denoise` (*float*, opcional): Intensidad de cambio (`0.1` a `1.0`). Default: `0.7`.
-  - `preset` (*string*, opcional): Preset de checkpoint/sampler. Default: `"realista"`.
+  - `image_filename` (*string*, requerido): Nombre del archivo generado (ej: `mcp_00001_.png`).
+  - `prompt` (*string*, opcional): Instrucción de transformación. Vacío = variación visual pura.
+  - `denoise` (*float*, opcional): `0.0` idéntica, `1.0` completamente nueva. Default: `0.55`.
+  - `preset` (*string*, opcional): Default: `"realista"`.
+  - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix` (opcionales).
 
 ### 3. `list_models`
-Retorna la lista de checkpoints, LoRAs y samplers disponibles en la instancia de ComfyUI.
+Retorna la lista de checkpoints, LoRAs y presets disponibles en la instancia de ComfyUI.
 
 ### 4. `comfy_health`
 Obtiene el estado de salud del backend: versión de ComfyUI, uso de VRAM de la GPU y tareas en cola.
@@ -132,10 +135,10 @@ Construye la URL LAN de descarga directa para un archivo generado previamente da
 
 | Preset | Checkpoint Asociado | Pasos | CFG | Caso de Uso |
 |--------|---------------------|-------|-----|-------------|
-| `producto` | `RealVisXL_V4.0.safetensors` | 30 | 7.0 | Fotografía comercial y de producto fotorrealista. |
-| `realista` | `juggernautXL_ragnarokBy.safetensors` | 30 | 7.0 | Fotorrealismo versátil de alta calidad (Default). |
-| `rapido` | `juggernautXL_ragnarokBy.safetensors` | 6 | 2.0 | Vista previa y borradores en ~5 segundos. |
-| `anime` | `animagine-xl-3.1.safetensors` | 28 | 7.0 | Ilustración digital y estilo anime. |
+| `producto` | `RealVisXL_V4.0.safetensors` | 30 | 5.5 | Fotografía comercial y de producto fotorrealista (Default). |
+| `realista` | `juggernautXL_ragnarokBy.safetensors` | 30 | 5.0 | Fotorrealismo versátil (escenas, personas, ambientes). |
+| `rapido` | `juggernautXL_ragnarokBy.safetensors` + LoRA SDXL-Lightning | 6 | 1.5 | Vista previa y borradores en ~5 segundos. |
+| `anime` | `animagine-xl-3.1.safetensors` | 28 | 7.0 | Ilustración estilo anime (checkpoint no incluido en el server). |
 
 ---
 

@@ -14,9 +14,11 @@ def _try_start() -> None:
     # reset-failed despeja el rate-limit de systemd ("Start request repeated
     # too quickly"); un start bloqueado por él no falla distinto de uno por
     # VRAM insuficiente, así que se re-emite antes de cada intento.
+    # --no-block: sin él systemctl espera al ExecStartPre del broker (bajar
+    # llama-server) y congela el event loop; el polling de abajo ya espera.
     subprocess.run(["systemctl", "reset-failed", COMFYUI_SERVICE],
                    capture_output=True, text=True, check=False)
-    subprocess.run(["systemctl", "start", COMFYUI_SERVICE],
+    subprocess.run(["systemctl", "start", "--no-block", COMFYUI_SERVICE],
                    capture_output=True, text=True, check=False)
 
 

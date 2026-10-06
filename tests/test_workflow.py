@@ -41,3 +41,26 @@ def test_img2img_usa_vaeencode_y_denoise():
     assert wf["13"]["class_type"] == "VAEEncode"
     assert wf["3"]["inputs"]["denoise"] == 0.6
     assert wf["3"]["inputs"]["latent_image"] == ["13", 0]
+
+
+def test_img2img_no_arma_latent_vacio():
+    wf = build_img2img(
+        prompt="a cat", negative="bad", checkpoint="ckpt.safetensors",
+        image_path="input.png", denoise=0.6, steps=30, cfg=5.0,
+        sampler="dpmpp_2m", scheduler="karras", seed=1,
+        lora=None, lora_strength=0.8, filename_prefix="mcp",
+    )
+    assert "5" not in wf
+
+
+def test_face_detailer_usa_params_del_sampler():
+    wf = build_txt2img(
+        prompt="a cat", negative="bad", checkpoint="ckpt.safetensors",
+        width=1024, height=1024, steps=6, cfg=1.5,
+        sampler="euler", scheduler="sgm_uniform", seed=1, batch=1,
+        lora="lightning.safetensors", lora_strength=1.0, filename_prefix="mcp",
+        detail_face=True,
+    )
+    fd = wf["14"]["inputs"]
+    assert (fd["steps"], fd["cfg"], fd["scheduler"]) == (6, 1.5, "sgm_uniform")
+    assert wf["9"]["inputs"]["images"] == ["14", 0]

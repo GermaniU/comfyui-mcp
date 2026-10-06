@@ -5,6 +5,17 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Corregido
+- El preset `rapido` aplica el LoRA de Lightning a la fuerza del preset (1.0) en vez de 0.8.
+- `detail_face` usa los steps/cfg/scheduler del preset; con `rapido` quemaba las caras.
+- Las URLs de descarga codifican `filename`/`subfolder` (espacios, `&`).
+- El arranque de `comfyui.service` ya no bloquea el event loop mientras el GPU Broker libera la GPU.
+- Una generación que vence el timeout se saca de la cola de ComfyUI.
+- `img2img` lee la imagen directo de `output/` (`LoadImage` con `[output]`) sin copiarla a `input/` ni depender de rutas fijas.
+- `comfyui-mcp.service` apunta al entry point actual.
+
 ## [0.1.0] - 2026-08-09
 
 ### Añadido
@@ -12,7 +23,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Integración GPU Arbiter**: Coordinación automática de VRAM entre ComfyUI y `llama-server` para evitar colisiones de memoria en GPU de 12GB.
 - **Herramientas MCP**:
   - `generate_image`: Generación txt2img con soporte para presets (`producto`, `realista`, `rapido`, `anime`), aspect ratio y seed manual.
-  - `img2img`: Transformación img2img pasando imagen base como URL o base64 con denoising adaptable.
+  - `img2img`: Variación de una imagen ya generada (por filename) con denoising adaptable.
   - `list_models`: Consulta de checkpoints, LoRAs y samplers disponibles en el server ComfyUI.
   - `comfy_health`: Monitor de salud de ComfyUI (versión, VRAM libre/total, cola de ejecución).
   - `comfy_view_url`: Resolución de URLs LAN para descarga directa de imágenes generadas.

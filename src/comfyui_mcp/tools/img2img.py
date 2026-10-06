@@ -1,25 +1,15 @@
 """Tool img2img: variar una imagen existente con denoise controlado."""
 
-import os
 import random
-import shutil
 
 from .. import comfy_client, gpu_arbiter, workflow
 from ..config import (
-    COMFY_PUBLIC_URL,
     DEFAULT_NEGATIVE,
     GENERATE_TIMEOUT,
     PRESETS,
 )
-
-# ComfyUI busca imágenes de LoadImage en input/, no en output/
-_INPUT_DIR = os.path.expanduser("~/stack/comfyui/input")
-_OUTPUT_DIR = os.path.expanduser("~/stack/comfyui/output")
-
-
-def _view_url(filename: str, subfolder: str, img_type: str) -> str:
-    return (f"{COMFY_PUBLIC_URL}/view?filename={filename}"
-            f"&subfolder={subfolder}&type={img_type}")
+from .generate import resolve_preset
+from .view import image_lines
 
 
 async def img2img(
@@ -31,7 +21,7 @@ async def img2img(
     seed: int | None = None,
     checkpoint: str | None = None,
     lora: str | None = None,
-    lora_strength: float = 0.8,
+    lora_strength: float | None = None,
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp-i2i",
@@ -46,52 +36,28 @@ async def img2img(
 
     if preset not in PRESETS:
         return f"Preset desconocido: '{preset}'. Válidos: {list(PRESETS.keys())}"
-    p = PRESETS[preset]
     seed = seed if seed is not None else random.randint(0, 2**48)
-    checkpoint = checkpoint or p["checkpoint"]
-    lora = lora or p.get("lora")
-    lora_strength = float(lora_strength if lora else p.get("lora_strength", 0.8))
-    steps = int(steps if steps is not None else p["steps"])
-    cfg = float(cfg if cfg is not None else p["cfg"])
+    params = resolve_preset(preset, checkpoint, lora, lora_strength, steps, cfg)
     denoise = max(0.0, min(1.0, float(denoise)))
-    negative = negative_prompt or DEFAULT_NEGATIVE
     # Si no hay prompt, usar uno neutro que no distorsione
     if not prompt:
         prompt = "high quality, detailed, sharp focus"
 
-    # ComfyUI LoadImage busca en input/. Si la imagen está en output/, copiarla.
-    src_output = os.path.join(_OUTPUT_DIR, image_filename)
-    dst_input = os.path.join(_INPUT_DIR, image_filename)
-    if os.path.isfile(src_output) and not os.path.isfile(dst_input):
-        shutil.copy2(src_output, dst_input)
-
     try:
         wf = workflow.build_img2img(
-            prompt, negative, checkpoint, image_filename,
-            denoise, steps, cfg, p["sampler"], p["scheduler"], seed,
-            lora, lora_strength, filename_prefix,
+            prompt=prompt, negative=negative_prompt or DEFAULT_NEGATIVE,
+            # LoadImage resuelve el sufijo " [output]" contra output/ de ComfyUI
+            image_path=f"{image_filename} [output]", denoise=denoise,
+            seed=seed, filename_prefix=filename_prefix, **params,
         )
         prompt_id = await comfy_client.submit_prompt(wf)
         entry = await comfy_client.wait_for_result(prompt_id, GENERATE_TIMEOUT)
     except Exception as e:  # noqa: BLE001
         return f"Error en img2img: {type(e).__name__}: {e}"
 
-    files = []
-    for output in entry.get("outputs", {}).values():
-        for img in output.get("images", []):
-            sub = img.get("subfolder", "")
-            files.append({"filename": img["filename"], "subfolder": sub,
-                          "type": img.get("type", "output")})
-
-    if not files:
-        return f"Terminó sin imágenes (prompt_id {prompt_id})."
-
-    lines = [
-        (
-            f"{len(files)} imagen(es) generada(s) · img2img · base={image_filename} · "
-            f"denoise={denoise} · seed={seed} · {checkpoint} · {steps} steps:"
-        )
-    ]
-    for f in files:
-        lines.append(f"  · {f['filename']} → {_view_url(f['filename'], f['subfolder'], f['type'])}")
-    return "\n".join(lines)
+    lines = image_lines(entry)
+    header = (
+        f"{len(lines)} imagen(es) generada(s) · img2img · base={image_filename} · "
+        f"denoise={denoise} · seed={seed} · {params['checkpoint']} · {params['steps']} steps:"
+    )
+    return "\n".join([header, *lines])
