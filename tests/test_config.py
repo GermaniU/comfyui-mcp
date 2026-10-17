@@ -1,6 +1,6 @@
 """Tests de config: presets y aspects válidos."""
 
-from comfyui_mcp.config import ASPECTS, PRESETS
+from comfyui_mcp.config import ASPECTS, PRESETS, VIDEO_ASPECTS
 
 
 def test_presets_requeridos():
@@ -19,3 +19,8 @@ def test_aspects_son_multiplos_de_8():
 def test_aspects_1mp():
     for name, (w, h) in ASPECTS.items():
         assert 700_000 <= w * h <= 1_200_000, f"{name} fuera de rango ~1MP"
+
+
+def test_video_aspects_son_multiplos_de_32():
+    for name, (w, h) in VIDEO_ASPECTS.items():
+        assert w % 32 == 0 and h % 32 == 0, f"{name} {w}x{h} no es múltiplo de 32"

@@ -1,6 +1,7 @@
-"""Tests de workflow: estructura de nodos txt2img e img2img."""
+"""Tests de workflow: estructura de nodos txt2img, img2img y video."""
 
-from comfyui_mcp.workflow import build_img2img, build_txt2img
+from comfyui_mcp.config import VIDEO_MODEL
+from comfyui_mcp.workflow import build_img2img, build_txt2img, build_video
 
 
 def test_txt2img_nodos_esenciales():
@@ -86,3 +87,32 @@ def test_sin_preview_no_hay_nodos_extra():
         lora=None, lora_strength=0.8, filename_prefix="mcp",
     )
     assert "15" not in wf and "16" not in wf
+
+
+def _video(**kw):
+    return build_video(prompt="a cat", negative="bad", width=1280, height=704,
+                       length=73, fps=24, seed=1, filename_prefix="mcp-video",
+                       **VIDEO_MODEL, **kw)
+
+
+def test_txt2video_sin_imagen_de_partida():
+    wf = _video()
+    assert wf["7"]["class_type"] == "Wan22ImageToVideoLatent"
+    assert "start_image" not in wf["7"]["inputs"]
+    assert "12" not in wf
+    assert wf["8"]["inputs"]["model"] == ["4", 0], "el sampler va con el shift de ModelSamplingSD3"
+    assert wf["11"]["class_type"] == "SaveVideo"
+    assert wf["11"]["inputs"]["video"] == ["10", 0]
+
+
+def test_img2video_usa_la_imagen_como_primer_frame():
+    wf = _video(image_path="base_00001_.png [output]")
+    assert wf["12"] == {"class_type": "LoadImage", "inputs": {"image": "base_00001_.png [output]"}}
+    assert wf["7"]["inputs"]["start_image"] == ["12", 0]
+
+
+def test_preview_de_video_es_el_primer_frame():
+    wf = _video(preview=True)
+    assert wf["13"]["inputs"] == {"image": ["9", 0], "batch_index": 0, "length": 1}
+    assert wf["15"]["inputs"]["image"] == ["13", 0]
+    assert wf["16"]["class_type"] == "PreviewImage"

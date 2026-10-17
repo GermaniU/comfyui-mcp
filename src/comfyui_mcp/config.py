@@ -13,6 +13,7 @@ _WAKE_POLL_S = 2
 
 DEFAULT_TIMEOUT = 15.0
 GENERATE_TIMEOUT = 600.0  # primera carga de un checkpoint SDXL (6.5GB) + sampling
+VIDEO_TIMEOUT = 1800.0  # Wan 2.2 5B en la 3060 con offload: varios minutos por clip
 
 DEFAULT_NEGATIVE = (
     "low quality, worst quality, blurry, jpeg artifacts, watermark, text, "
@@ -55,3 +56,28 @@ ASPECTS = {
     "3:2": (1216, 832),
     "2:3": (832, 1216),
 }
+
+# Video: Wan 2.2 TI2V 5B, nodos nativos de ComfyUI. Un solo modelo hace
+# txt2video e img2video; con el offload de ComfyUI entra en los 12GB.
+VIDEO_MODEL = {
+    "unet": "wan2.2_ti2v_5B_fp16.safetensors",
+    "clip": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "vae": "wan2.2_vae.safetensors",
+    "steps": 20, "cfg": 5.0, "sampler": "uni_pc", "scheduler": "simple", "shift": 8.0,
+}
+VIDEO_FPS = 24
+VIDEO_MAX_SECONDS = 5  # entrenado con clips de 121 frames
+
+# Lados múltiplos de 32 (Wan22ImageToVideoLatent); 1280x704 es su 720p nativo.
+VIDEO_ASPECTS = {
+    "16:9": (1280, 704),
+    "9:16": (704, 1280),
+    "1:1": (960, 960),
+}
+
+# El negativo del workflow oficial de Wan (umT5 es multilingüe).
+VIDEO_NEGATIVE = (
+    "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，"
+    "低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，"
+    "毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+)

@@ -9,6 +9,7 @@ from comfyui_mcp.server import mcp
 from comfyui_mcp.tools import img2img as img2img_tool
 from comfyui_mcp.tools.generate import generate_image, resolve_preset
 from comfyui_mcp.tools.models import list_models
+from comfyui_mcp.tools.video import generate_video
 from comfyui_mcp.tools.view import comfy_view_url
 
 
@@ -77,6 +78,29 @@ async def test_img2img_carga_desde_output(monkeypatch):
     wf, _ = await _capturar_workflow(
         monkeypatch, img2img_tool.img2img, image_filename="base_00001_.png")
     assert wf["12"]["inputs"]["image"] == "base_00001_.png [output]"
+
+
+async def test_video_frames_segun_segundos(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", seconds=9)
+    assert wf["7"]["inputs"]["length"] == 121, "se recorta a 5s (5*24+1 frames)"
+    assert "LoadImage" not in [n["class_type"] for n in wf.values()]
+    assert "txt2video" in salida
+
+
+async def test_video_anima_imagen_desde_output(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", aspect="9:16",
+        image_filename="base_00001_.png")
+    assert wf["12"]["inputs"]["image"] == "base_00001_.png [output]"
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (704, 1280)
+    assert "img2video base=base_00001_.png" in salida
+
+
+async def test_video_aspect_invalido(monkeypatch):
+    _, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", aspect="4:5")
+    assert salida.startswith("Aspect desconocido")
 
 
 async def test_timeout_saca_el_prompt_de_la_cola(monkeypatch):

@@ -124,13 +124,24 @@ Varies an already generated image (in ComfyUI's `output/`) with a denoise streng
   - `preset` (*string*, optional): Default: `"realista"`.
   - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix`, `preview` (optional).
 
-### 3. `list_models`
+### 3. `generate_video` (Wan 2.2)
+Generates a short MP4 clip (24fps) with Wan 2.2 TI2V 5B. Without an image it is txt2video; with `image_filename` it animates that image as the first frame. Needs the video models (see [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22)). On the RTX 3060 a clip takes several minutes.
+
+- **Parameters**:
+  - `prompt` (*string*, required): Scene and motion (camera, subject), in English.
+  - `aspect` (*string*, optional): `16:9` (1280x704), `9:16` (704x1280) or `1:1` (960x960). Default: `"16:9"`.
+  - `seconds` (*integer*, optional): Duration, 1-5. Default: `3`.
+  - `image_filename` (*string*, optional): Already generated image to animate (e.g. `mcp_00001_.png`); its aspect should match the video's.
+  - `negative_prompt`, `seed`, `steps`, `cfg`, `filename_prefix` (optional). Default prefix: `"mcp-video"`.
+  - `preview` (*bool*, optional): JPEG thumbnail of the first frame. Default: `false`.
+
+### 4. `list_models`
 Returns available checkpoints, LoRAs, and presets on the ComfyUI instance.
 
-### 4. `comfy_health`
+### 5. `comfy_health`
 Retrieves backend engine health: ComfyUI version, GPU VRAM usage, and queue length.
 
-### 5. `comfy_view_url`
+### 6. `comfy_view_url`
 Constructs the direct LAN download URL for a generated image given its `filename` and `subfolder`.
 
 ---
