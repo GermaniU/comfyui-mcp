@@ -72,6 +72,33 @@ curl -L -o juggernautXL_ragnarokBy.safetensors "https://civitai.com/api/download
 
 ---
 
+## 🎬 Step 2b: Modelos de Video (Wan 2.2)
+
+`generate_video` usa Wan 2.2 TI2V 5B con nodos nativos de ComfyUI (sin custom nodes; requiere un ComfyUI con soporte de Wan 2.2, julio 2025 en adelante). Son ~17GB en disco; con el offload de ComfyUI el modelo entra en los 12GB de la 3060, pero mientras genera necesita la GPU entera (el broker baja a llama-server igual que con SDXL).
+
+```
+~/stack/comfyui/models/
+├── diffusion_models/
+│   └── wan2.2_ti2v_5B_fp16.safetensors          # 9.3GB
+├── text_encoders/
+│   └── umt5_xxl_fp8_e4m3fn_scaled.safetensors   # 6.3GB
+└── vae/
+    └── wan2.2_vae.safetensors                   # 1.3GB
+```
+
+```bash
+cd ~/stack/comfyui/models/
+HF=https://huggingface.co/Comfy-Org
+curl -L -o diffusion_models/wan2.2_ti2v_5B_fp16.safetensors \
+  "$HF/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors"
+curl -L -o text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors \
+  "$HF/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+curl -L -o vae/wan2.2_vae.safetensors \
+  "$HF/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors"
+```
+
+---
+
 ## ⚡ Step 3: Configuración del GPU Broker & Arbiter
 
 En servidores donde la GPU de 12GB se comparte entre un LLM (`llama-server`) y ComfyUI, se requiere el mecanismo de arbitraje para conmutar servicios sin agotar VRAM.
