@@ -2,16 +2,16 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.GermaniU/comfyui-mcp",
   "title": "ComfyUI MCP",
-  "description": "MCP server that wraps a ComfyUI (SDXL / Wan 2.2) instance for image and short-video generation: txt2img, img2img, txt2video/img2video, and model listing, with a GPU arbiter that shares a 12GB card with an LLM.",
+  "description": "MCP server that wraps ComfyUI (SDXL/Wan 2.2) for image and short-video generation.",
   "repository": {
     "url": "https://github.com/GermaniU/comfyui-mcp",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/germaniu/comfyui-mcp:0.1.0",
+      "identifier": "ghcr.io/germaniu/comfyui-mcp:0.1.1",
       "transport": {
         "type": "stdio"
       },
