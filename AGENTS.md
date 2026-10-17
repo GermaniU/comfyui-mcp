@@ -15,11 +15,12 @@ src/comfyui_mcp/
 ├── config.py          # env vars, presets, aspects, constantes
 ├── comfy_client.py    # HTTP client thin a ComfyUI (system_stats, prompt, history, view)
 ├── gpu_arbiter.py     # ensure_comfyui_running + wake
-├── workflow.py        # build_txt2img + build_img2img (+ FaceDetailer opcional)
-├── tools/             # generate_image, img2img, list_models, comfy_health, comfy_view_url
+├── workflow.py        # build_txt2img + build_img2img (+ FaceDetailer opcional) + build_video
+├── tools/             # generate_image, img2img, generate_video, list_models, comfy_health, comfy_view_url
 │   ├── __init__.py
 │   ├── generate.py
 │   ├── img2img.py
+│   ├── video.py
 │   ├── models.py
 │   ├── health.py
 │   └── view.py
@@ -43,9 +44,10 @@ tests/                 # pytest por módulo
 |------|-------------|
 | `generate_image` | txt2img con presets (producto/realista/rapido/anime) o params manuales |
 | `img2img` | Variación de una imagen ya generada con denoise controlado |
+| `generate_video` | Clip corto MP4 con Wan 2.2 TI2V 5B (txt2video o animar una imagen generada) |
 | `list_models` | Checkpoints, loras y presets disponibles |
 | `comfy_health` | Estado de ComfyUI: versión, VRAM, cola |
-| `comfy_view_url` | URL LAN de descarga de una imagen generada |
+| `comfy_view_url` | URL LAN de descarga de una imagen o video generado |
 
 ## Configuración (env vars)
 

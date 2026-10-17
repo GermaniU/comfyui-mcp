@@ -9,6 +9,7 @@ from comfyui_mcp.server import mcp
 from comfyui_mcp.tools import img2img as img2img_tool
 from comfyui_mcp.tools.generate import generate_image, resolve_preset
 from comfyui_mcp.tools.models import list_models
+from comfyui_mcp.tools.video import generate_video
 from comfyui_mcp.tools.view import comfy_view_url
 
 
@@ -77,6 +78,56 @@ async def test_img2img_carga_desde_output(monkeypatch):
     wf, _ = await _capturar_workflow(
         monkeypatch, img2img_tool.img2img, image_filename="base_00001_.png")
     assert wf["12"]["inputs"]["image"] == "base_00001_.png [output]"
+
+
+async def test_video_frames_segun_segundos(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", seconds=9)
+    assert wf["7"]["inputs"]["length"] == 121, "se recorta a 5s (5*24+1 frames)"
+    assert "LoadImage" not in [n["class_type"] for n in wf.values()]
+    assert "txt2video" in salida
+
+
+async def test_video_anima_imagen_desde_output(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", aspect="9:16",
+        image_filename="base_00001_.png")
+    assert wf["12"]["inputs"]["image"] == "base_00001_.png [output]"
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (704, 1280)
+    assert "img2video base=base_00001_.png" in salida
+
+
+async def test_video_minimo_un_segundo_y_params_explicitos(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", seconds=0, steps=8, cfg=3.0, seed=7)
+    assert wf["7"]["inputs"]["length"] == 25
+    ks = wf["8"]["inputs"]
+    assert (ks["steps"], ks["cfg"], ks["seed"]) == (8, 3.0, 7)
+    assert "seed 7" in salida and "8 steps" in salida
+
+
+async def test_video_preview_por_mcp(monkeypatch):
+    async def call(**kw):
+        async with Client(mcp) as c:
+            return await c.call_tool("generate_video", kw)
+
+    wf, r = await _capturar_workflow(monkeypatch, call, prompt="a cat", preview=True)
+    assert wf["11"]["class_type"] == "SaveVideo"
+    assert [b.type for b in r.content] == ["text", "image"]
+    assert "x_00001_.png" in r.content[0].text
+
+
+async def test_video_borrador_baja_la_resolucion(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", aspect="9:16", draft=True)
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (480, 832)
+    assert "(borrador)" in salida and "480x832" in salida
+
+
+async def test_video_aspect_invalido(monkeypatch):
+    _, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", aspect="4:5")
+    assert salida.startswith("Aspect desconocido")
 
 
 async def test_timeout_saca_el_prompt_de_la_cola(monkeypatch):

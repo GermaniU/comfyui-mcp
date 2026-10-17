@@ -14,6 +14,7 @@ from .tools.generate import generate_image
 from .tools.health import comfy_health
 from .tools.img2img import img2img
 from .tools.models import list_models
+from .tools.video import generate_video
 from .tools.view import comfy_view_url
 
 mcp = FastMCP("comfyui-image")
@@ -89,7 +90,7 @@ async def _comfy_health() -> str:
 
 @mcp.tool(
     name="comfy_view_url",
-    description="Devuelve la URL LAN de descarga directa para una imagen ya generada (por filename).",
+    description="Devuelve la URL LAN de descarga directa para una imagen o video ya generado (por filename).",
 )
 async def _comfy_view_url(filename: str, subfolder: str = "", img_type: str = "output") -> str:
     return comfy_view_url(filename, subfolder, img_type)
@@ -126,6 +127,42 @@ async def _img2img(
         negative_prompt=negative_prompt, preset=preset, denoise=denoise,
         seed=seed, checkpoint=checkpoint, lora=lora, lora_strength=lora_strength,
         steps=steps, cfg=cfg, filename_prefix=filename_prefix, preview=preview,
+    )
+
+
+@mcp.tool(
+    name="generate_video",
+    description=(
+        "Genera un clip corto (1-5s, 24fps, MP4) con Wan 2.2 en la RTX 3060. Sin "
+        "image_filename es txt2video; con image_filename (una imagen ya generada, "
+        "ej: mcp_00001_.png) la anima usándola como primer frame — conviene que su "
+        "aspect coincida con el del video. aspect: 16:9, 9:16 o 1:1. Tarda varios "
+        "minutos (más la primera vez por carga del modelo); describir la escena y el "
+        "movimiento de cámara en inglés. draft=true genera a ~480p, bastante más "
+        "rápido: útil para probar el prompt antes de la versión final. Devuelve "
+        "filename + URL de descarga. "
+        "preview=true devuelve además una miniatura JPEG del primer frame."
+    ),
+    output_schema=None,
+)
+async def _generate_video(
+    prompt: str,
+    aspect: str = "16:9",
+    seconds: int = 3,
+    image_filename: str | None = None,
+    negative_prompt: str | None = None,
+    seed: int | None = None,
+    steps: int | None = None,
+    cfg: float | None = None,
+    filename_prefix: str = "mcp-video",
+    draft: bool = False,
+    preview: bool = False,
+) -> str | list:
+    return await generate_video(
+        prompt=prompt, aspect=aspect, seconds=seconds,
+        image_filename=image_filename, negative_prompt=negative_prompt,
+        seed=seed, steps=steps, cfg=cfg, filename_prefix=filename_prefix,
+        draft=draft, preview=preview,
     )
 
 

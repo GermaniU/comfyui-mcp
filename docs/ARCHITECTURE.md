@@ -52,7 +52,7 @@
 
 ### 1. FastMCP Server (`src/comfyui_mcp/server.py`)
 - Expone endpoints HTTP y SSE bajo el protocolo Model Context Protocol (MCP).
-- Declara e inicia las herramientas expuestas (`generate_image`, `img2img`, `list_models`, `comfy_health`, `comfy_view_url`).
+- Declara e inicia las herramientas expuestas (`generate_image`, `img2img`, `generate_video`, `list_models`, `comfy_health`, `comfy_view_url`).
 - Maneja el ciclo de vida del servidor Uvicorn / Starlette.
 
 ### 2. Comfy Client (`src/comfyui_mcp/comfy_client.py`)
@@ -65,7 +65,7 @@
 
 ### 3. Workflow Builder (`src/comfyui_mcp/workflow.py`)
 - Construye el grafo JSON del prompt de ComfyUI de forma programática.
-- Soporta pipelines SDXL txt2img e img2img.
+- Soporta pipelines SDXL txt2img e img2img, y video con Wan 2.2 TI2V 5B (`UNETLoader`, `Wan22ImageToVideoLatent`, `CreateVideo`, `SaveVideo`).
 - Configura nodos clave: `KSampler`, `CheckpointLoaderSimple`, `CLIPTextEncode`, `EmptyLatentImage`, `VAEDecode`, `SaveImage`, y `LoadImage`.
 - Aplica presets predefinidos (`producto`, `realista`, `rapido`, `anime`) ajustando modelos, pasos de muestreo, cfg y sampler name.
 

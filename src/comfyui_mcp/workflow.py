@@ -1,4 +1,4 @@
-"""Construcción de workflows txt2img / img2img en formato API de ComfyUI."""
+"""Construcción de workflows txt2img / img2img / video en formato API de ComfyUI."""
 
 from typing import Any
 
@@ -56,7 +56,7 @@ def build_txt2img(
         _add_face_detailer(wf, model_ref, clip_ref, seed, steps, cfg,
                            sampler, scheduler)
     if preview:
-        _add_preview(wf)
+        _add_preview(wf, wf["9"]["inputs"]["images"])
     return wf
 
 
@@ -76,15 +76,61 @@ def build_img2img(
     wf["3"]["inputs"]["denoise"] = denoise
     wf["9"]["inputs"]["filename_prefix"] = filename_prefix
     if preview:
-        _add_preview(wf)
+        _add_preview(wf, wf["9"]["inputs"]["images"])
     return wf
 
 
-def _add_preview(wf: dict) -> None:
-    # Copia a la mitad de lo que guarda SaveImage (post FaceDetailer si lo
-    # hay); PreviewImage la deja en temp/ para devolverla como miniatura.
+def build_video(
+    prompt: str, negative: str, unet: str, clip: str, vae: str,
+    width: int, height: int, length: int, fps: int, steps: int, cfg: float,
+    sampler: str, scheduler: str, shift: float, seed: int,
+    filename_prefix: str, image_path: str | None = None, preview: bool = False,
+) -> dict:
+    """Workflow Wan 2.2 TI2V: txt2video, o img2video si hay image_path
+    (la imagen es el primer frame)."""
+    wf: dict[str, Any] = {
+        "1": {"class_type": "UNETLoader",
+              "inputs": {"unet_name": unet, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader",
+              "inputs": {"clip_name": clip, "type": "wan"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae}},
+        "4": {"class_type": "ModelSamplingSD3",
+              "inputs": {"model": ["1", 0], "shift": shift}},
+        "5": {"class_type": "CLIPTextEncode",
+              "inputs": {"text": prompt, "clip": ["2", 0]}},
+        "6": {"class_type": "CLIPTextEncode",
+              "inputs": {"text": negative, "clip": ["2", 0]}},
+        "7": {"class_type": "Wan22ImageToVideoLatent", "inputs": {
+            "vae": ["3", 0], "width": width, "height": height,
+            "length": length, "batch_size": 1}},
+        "8": {"class_type": "KSampler", "inputs": {
+            "seed": seed, "steps": steps, "cfg": cfg,
+            "sampler_name": sampler, "scheduler": scheduler, "denoise": 1.0,
+            "model": ["4", 0], "positive": ["5", 0], "negative": ["6", 0],
+            "latent_image": ["7", 0]}},
+        "9": {"class_type": "VAEDecode",
+              "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
+        "10": {"class_type": "CreateVideo",
+               "inputs": {"images": ["9", 0], "fps": fps}},
+        "11": {"class_type": "SaveVideo", "inputs": {
+            "video": ["10", 0], "filename_prefix": filename_prefix,
+            "format": "auto", "codec": "auto"}},
+    }
+    if image_path:
+        wf["12"] = {"class_type": "LoadImage", "inputs": {"image": image_path}}
+        wf["7"]["inputs"]["start_image"] = ["12", 0]
+    if preview:
+        wf["13"] = {"class_type": "ImageFromBatch",
+                    "inputs": {"image": ["9", 0], "batch_index": 0, "length": 1}}
+        _add_preview(wf, ["13", 0])
+    return wf
+
+
+def _add_preview(wf: dict, images: list) -> None:
+    # Copia a la mitad de lo que se guarda (post FaceDetailer si lo hay; el
+    # primer frame en video); PreviewImage la deja en temp/ como miniatura.
     wf["15"] = {"class_type": "ImageScaleBy", "inputs": {
-        "image": wf["9"]["inputs"]["images"], "upscale_method": "area", "scale_by": 0.5}}
+        "image": images, "upscale_method": "area", "scale_by": 0.5}}
     wf["16"] = {"class_type": "PreviewImage", "inputs": {"images": ["15", 0]}}
 
 
