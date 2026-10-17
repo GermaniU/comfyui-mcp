@@ -18,6 +18,12 @@
 
 **Tags:** `mcp-server` · `comfyui` · `sdxl` · `image-generation` · `ai-agents` · `fastmcp` · `claude-code` · `cursor` · `hermes-gateway` · `gpu-arbiter` · `local-first` · `self-hosted`
 
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="El agente genera una imagen real vía MCP en la RTX 3060" width="780">
+</p>
+
+<p align="center"><sub>El agente pide una imagen con un preset y recibe la URL de descarga — la GPU trabaja en el server, el cliente no instala PyTorch.</sub></p>
+
 ---
 
 ## 💡 Por qué existe
@@ -155,6 +161,27 @@ Construye la URL LAN de descarga directa para un archivo generado previamente da
 | `realista` | `juggernautXL_ragnarokBy.safetensors` | 30 | 5.0 | Fotorrealismo versátil (escenas, personas, ambientes). |
 | `rapido` | `juggernautXL_ragnarokBy.safetensors` + LoRA SDXL-Lightning | 6 | 1.5 | Vista previa y borradores en ~5 segundos. |
 | `anime` | `animagine-xl-3.1.safetensors` | 28 | 7.0 | Ilustración estilo anime (checkpoint no incluido en el server). |
+
+---
+
+## 🧭 ¿Y los otros servidores MCP de ComfyUI?
+
+Hay tres familias, y resuelven problemas distintos. Este no compite con las otras dos: las complementa.
+
+| | **ComfyUI MCP** (este) | Servidores de *workflow graph* | APIs cloud de imagen |
+|---|---|---|---|
+| Qué le pides | Un **prompt + preset** (`producto`, `realista`, `rapido`, `anime`) | Un **grafo de nodos** en JSON (lo diseñas tú) | Un prompt a un servicio remoto |
+| Saber ComfyUI | No | Sí | No |
+| Dónde corre | Tu GPU (RTX 3060) | Tu GPU | El servidor de un tercero |
+| Coste por imagen | 0 (tu electricidad) | 0 | Por imagen, según proveedor |
+| Privacidad | El prompt no sale de tu red | Igual | Tu prompt sale a la nube |
+| Comparte la GPU con el LLM | **Sí** (GPU Arbiter, 12 GB) | Depende | N/A |
+| Cliente | HTTP/SSE en LAN + stdio — **cero PyTorch en el cliente** | Normalmente stdio local | HTTP |
+
+**En una frase:**
+- Si necesitas control total del grafo de nodos → un servidor de *workflow graph* (p. ej. `comfy-pilot`).
+- Si no tienes GPU y no te importa pagar por imagen → una API cloud (Flux, Nano Banana, GPT-image).
+- Si tienes la GPU y quieres **generar sin aprender ComfyUI**, compartiendo la tarjeta con tu LLM → este.
 
 ---
 

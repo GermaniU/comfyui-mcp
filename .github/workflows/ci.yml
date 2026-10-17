@@ -29,3 +29,27 @@ jobs:
 
       - name: Run pytest
         run: uv run pytest
+
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build de la imagen
+        run: docker build -t comfyui-mcp:ci .
+
+      - name: El label del registry coincide con server.json
+        run: |
+          LABEL=$(docker inspect -f '{{ index .Config.Labels "io.modelcontextprotocol.server.name" }}' comfyui-mcp:ci)
+          NAME=$(jq -r .name server.json)
+          echo "label=$LABEL  server.json=$NAME"
+          test "$LABEL" = "$NAME"
+
+      - name: Smoke test stdio del contenedor
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | timeout 60 docker run -i --rm comfyui-mcp:ci --stdio > /tmp/out.json
+          cat /tmp/out.json
+          grep -q '"serverInfo"' /tmp/out.json

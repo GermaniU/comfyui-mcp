@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+tests
+docs
+*.md
+!README.md
+comfyui-mcp.service
+.env
