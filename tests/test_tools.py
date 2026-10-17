@@ -97,6 +97,26 @@ async def test_video_anima_imagen_desde_output(monkeypatch):
     assert "img2video base=base_00001_.png" in salida
 
 
+async def test_video_minimo_un_segundo_y_params_explicitos(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", seconds=0, steps=8, cfg=3.0, seed=7)
+    assert wf["7"]["inputs"]["length"] == 25
+    ks = wf["8"]["inputs"]
+    assert (ks["steps"], ks["cfg"], ks["seed"]) == (8, 3.0, 7)
+    assert "seed 7" in salida and "8 steps" in salida
+
+
+async def test_video_preview_por_mcp(monkeypatch):
+    async def call(**kw):
+        async with Client(mcp) as c:
+            return await c.call_tool("generate_video", kw)
+
+    wf, r = await _capturar_workflow(monkeypatch, call, prompt="a cat", preview=True)
+    assert wf["11"]["class_type"] == "SaveVideo"
+    assert [b.type for b in r.content] == ["text", "image"]
+    assert "x_00001_.png" in r.content[0].text
+
+
 async def test_video_aspect_invalido(monkeypatch):
     _, salida = await _capturar_workflow(
         monkeypatch, generate_video, prompt="a cat", aspect="4:5")
