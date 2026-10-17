@@ -4,10 +4,11 @@ Habla MCP de verdad contra un server comfyui-mcp en modo HTTP. Genera una imagen
 con el preset "rapido" (SDXL-Lightning) y resuelve la URL de descarga con
 comfy_view_url. Es la fuente de docs/assets/demo.gif.
 
-Requiere un server comfyui-mcp escuchando (por defecto http://localhost:8299/mcp)
-con COMFYUI_URL apuntando a un ComfyUI real.
+Requiere un server comfyui-mcp escuchando en MCP_DEMO_URL — por defecto el puerto
+del server, http://localhost:8201/mcp — con COMFYUI_URL apuntando a un ComfyUI real.
 
 Uso:
+    python scripts/demo_generate.py
     MCP_DEMO_URL=http://localhost:8299/mcp python scripts/demo_generate.py
 """
 
@@ -18,11 +19,10 @@ import json
 import os
 import re
 import sys
-import time
 
 from fastmcp import Client
 
-URL = os.environ.get("MCP_DEMO_URL", "http://localhost:8299/mcp")
+URL = os.environ.get("MCP_DEMO_URL", "http://localhost:8201/mcp")
 PROMPT = "a ceramic coffee cup on a walnut desk, soft window light, product photo"
 
 
@@ -30,8 +30,8 @@ def out(text: str = "") -> None:
     print(text, flush=True)
 
 
-def beat(seconds: float = 0.6) -> None:
-    time.sleep(seconds)
+async def beat(seconds: float = 0.6) -> None:
+    await asyncio.sleep(seconds)
 
 
 def payload(result):
@@ -50,10 +50,10 @@ async def main() -> int:
     out()
     out("  \033[1mComfyUI MCP\033[0m — el agente genera una imagen en la RTX 3060")
     out("  \033[2m──────────────────────────────────────────────────────────\033[0m")
-    beat()
+    await beat()
     async with Client(URL) as c:
         out("  \033[2magent →\033[0m generate_image  { preset: \"rapido\" }")
-        beat()
+        await beat()
         res = payload(await c.call_tool("generate_image", {
             "prompt": PROMPT,
             "preset": "rapido",
@@ -66,9 +66,9 @@ async def main() -> int:
             out("  \033[1;31mno pude extraer el filename de la respuesta\033[0m")
             return 1
         filename = match.group(1)
-        beat()
+        await beat()
         out(f"  \033[2magent →\033[0m comfy_view_url  {{ filename: \"{filename}\" }}")
-        beat()
+        await beat()
         url = payload(await c.call_tool("comfy_view_url", {"filename": filename}))
         out("  \033[2mserver ←\033[0m " + str(url).strip())
     out()
