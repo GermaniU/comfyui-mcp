@@ -132,6 +132,7 @@ Generates a short MP4 clip (24fps) with Wan 2.2 TI2V 5B. Without an image it is 
   - `aspect` (*string*, optional): `16:9` (1280x704), `9:16` (704x1280) or `1:1` (960x960). Default: `"16:9"`.
   - `seconds` (*integer*, optional): Duration, 1-5. Default: `3`.
   - `image_filename` (*string*, optional): Already generated image to animate (e.g. `mcp_00001_.png`); its aspect should match the video's.
+  - `draft` (*bool*, optional): ~480p draft (`832x480`, `480x832`, `640x640`), less than half the pixels and much faster; for testing the prompt before the final take. Default: `false`.
   - `negative_prompt`, `seed`, `steps`, `cfg`, `filename_prefix` (optional). Default prefix: `"mcp-video"`.
   - `preview` (*bool*, optional): JPEG thumbnail of the first frame. Default: `false`.
 

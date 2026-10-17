@@ -132,6 +132,7 @@ Genera un clip corto MP4 (24fps) con Wan 2.2 TI2V 5B. Sin imagen es txt2video; c
   - `aspect` (*string*, opcional): `16:9` (1280x704), `9:16` (704x1280) o `1:1` (960x960). Default: `"16:9"`.
   - `seconds` (*integer*, opcional): Duración, 1-5. Default: `3`.
   - `image_filename` (*string*, opcional): Imagen ya generada a animar (ej: `mcp_00001_.png`); conviene que su aspect coincida con el del video.
+  - `draft` (*bool*, opcional): Borrador a ~480p (`832x480`, `480x832`, `640x640`), menos de la mitad de píxeles y bastante más rápido; para probar el prompt antes de la versión final. Default: `false`.
   - `negative_prompt`, `seed`, `steps`, `cfg`, `filename_prefix` (opcionales). Default de prefijo: `"mcp-video"`.
   - `preview` (*bool*, opcional): Miniatura JPEG del primer frame. Default: `false`.
 

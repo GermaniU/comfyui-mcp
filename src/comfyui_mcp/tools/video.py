@@ -5,6 +5,7 @@ import random
 from .. import comfy_client, gpu_arbiter, workflow
 from ..config import (
     VIDEO_ASPECTS,
+    VIDEO_DRAFT_ASPECTS,
     VIDEO_FPS,
     VIDEO_MAX_SECONDS,
     VIDEO_MODEL,
@@ -24,15 +25,17 @@ async def generate_video(
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp-video",
+    draft: bool = False,
     preview: bool = False,
 ) -> str | list:
     wake_err = await gpu_arbiter.ensure_comfyui_running()
     if wake_err:
         return f"ComfyUI no disponible: {wake_err}"
 
-    if aspect not in VIDEO_ASPECTS:
-        return f"Aspect desconocido: '{aspect}'. Válidos: {list(VIDEO_ASPECTS.keys())}"
-    width, height = VIDEO_ASPECTS[aspect]
+    sizes = VIDEO_DRAFT_ASPECTS if draft else VIDEO_ASPECTS
+    if aspect not in sizes:
+        return f"Aspect desconocido: '{aspect}'. Válidos: {list(sizes.keys())}"
+    width, height = sizes[aspect]
     seconds = min(max(int(seconds), 1), VIDEO_MAX_SECONDS)
     length = seconds * VIDEO_FPS + 1  # Wan pide 4n+1 frames
     seed = seed if seed is not None else random.randint(0, 2**48)
@@ -57,6 +60,8 @@ async def generate_video(
 
     lines = image_lines(entry)
     base = f"img2video base={image_filename}" if image_filename else "txt2video"
+    if draft:
+        base += " (borrador)"
     header = (
         f"{len(lines)} video(s) generado(s) · {base} · seed {seed} · {width}x{height} · "
         f"{seconds}s ({length} frames a {VIDEO_FPS}fps) · {params['steps']} steps:"

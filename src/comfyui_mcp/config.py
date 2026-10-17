@@ -74,6 +74,13 @@ VIDEO_ASPECTS = {
     "9:16": (704, 1280),
     "1:1": (960, 960),
 }
+# Borrador: ~0.4MP, menos de la mitad de píxeles que 720p, para iterar el
+# prompt rápido y después sacar la versión final.
+VIDEO_DRAFT_ASPECTS = {
+    "16:9": (832, 480),
+    "9:16": (480, 832),
+    "1:1": (640, 640),
+}
 
 # El negativo del workflow oficial de Wan (umT5 es multilingüe).
 VIDEO_NEGATIVE = (

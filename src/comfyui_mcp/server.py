@@ -138,7 +138,9 @@ async def _img2img(
         "ej: mcp_00001_.png) la anima usándola como primer frame — conviene que su "
         "aspect coincida con el del video. aspect: 16:9, 9:16 o 1:1. Tarda varios "
         "minutos (más la primera vez por carga del modelo); describir la escena y el "
-        "movimiento de cámara en inglés. Devuelve filename + URL de descarga. "
+        "movimiento de cámara en inglés. draft=true genera a ~480p, bastante más "
+        "rápido: útil para probar el prompt antes de la versión final. Devuelve "
+        "filename + URL de descarga. "
         "preview=true devuelve además una miniatura JPEG del primer frame."
     ),
     output_schema=None,
@@ -153,13 +155,14 @@ async def _generate_video(
     steps: int | None = None,
     cfg: float | None = None,
     filename_prefix: str = "mcp-video",
+    draft: bool = False,
     preview: bool = False,
 ) -> str | list:
     return await generate_video(
         prompt=prompt, aspect=aspect, seconds=seconds,
         image_filename=image_filename, negative_prompt=negative_prompt,
         seed=seed, steps=steps, cfg=cfg, filename_prefix=filename_prefix,
-        preview=preview,
+        draft=draft, preview=preview,
     )
 
 

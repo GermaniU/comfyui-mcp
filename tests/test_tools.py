@@ -117,6 +117,13 @@ async def test_video_preview_por_mcp(monkeypatch):
     assert "x_00001_.png" in r.content[0].text
 
 
+async def test_video_borrador_baja_la_resolucion(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="a cat", aspect="9:16", draft=True)
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (480, 832)
+    assert "(borrador)" in salida and "480x832" in salida
+
+
 async def test_video_aspect_invalido(monkeypatch):
     _, salida = await _capturar_workflow(
         monkeypatch, generate_video, prompt="a cat", aspect="4:5")

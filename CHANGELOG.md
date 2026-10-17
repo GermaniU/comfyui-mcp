@@ -8,7 +8,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ## [Unreleased]
 
 ### Añadido
-- `generate_video`: clips cortos MP4 (1-5s, 24fps) con Wan 2.2 TI2V 5B en nodos nativos de ComfyUI. txt2video, o img2video animando una imagen ya generada como primer frame. Modelos en `docs/SERVER_SETUP.md`.
+- `generate_video`: clips cortos MP4 (1-5s, 24fps) con Wan 2.2 TI2V 5B en nodos nativos de ComfyUI. txt2video, o img2video animando una imagen ya generada como primer frame. `draft=true` genera a ~480p para iterar el prompt más rápido. Modelos en `docs/SERVER_SETUP.md`.
 - `preview` en `generate_image` e `img2img`: devuelve una miniatura JPEG (~512px) junto al texto para que el modelo vea el resultado. Sin dependencias nuevas: la escala ComfyUI (`ImageScaleBy` + `PreviewImage`) y la convierte `/view?preview=jpeg`.
 
 ### Cambiado
