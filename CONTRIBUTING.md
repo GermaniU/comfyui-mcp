@@ -8,7 +8,7 @@
 
 ### Requisitos Previos
 - Python 3.11+
-- `uv` o `venv`
+- `uv` ≥ 0.13.4 o `venv` con `pip` ≥ 26.2.2: las versiones anteriores aún confían en la CA emSign comprometida (GHSA-6q48-6c7w-9gw2). `pyproject.toml` exige el mínimo de uv (`[tool.uv] required-version`).
 - Instancia activa de ComfyUI (opcional para tests mockeados, requerida para integración)
 
 ### Setup

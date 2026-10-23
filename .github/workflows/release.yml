@@ -44,6 +44,9 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          # Fresh base image and no layer cache (emSign CA incident).
+          pull: true
+          no-cache: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
