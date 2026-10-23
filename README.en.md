@@ -70,7 +70,7 @@ Generating images in multi-agent environments usually requires installing heavy 
 
 ### Prerequisites
 - Python 3.11+
-- `uv` (recommended) or `pip`
+- `uv` ≥ 0.13.4 (recommended) or `pip` ≥ 26.2.2: older releases still trust the compromised emSign CA (GHSA-6q48-6c7w-9gw2). `pyproject.toml` enforces the uv floor (`[tool.uv] required-version`).
 
 ### Install
 
