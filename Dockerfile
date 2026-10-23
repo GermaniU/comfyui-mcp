@@ -18,6 +18,21 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
 
+# Bootstrap a pip that no longer trusts the compromised emSign CA
+# (GHSA-6q48-6c7w-9gw2) before resolving anything from PyPI. The wheel is
+# fetched with a pinned SHA-256 and run directly, so the base image's older
+# pip never touches the network. The system CA store is refreshed too, since
+# pip also consults it.
+ADD --checksum=sha256:fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70 \
+    https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl \
+    /tmp/pip-26.2.2-py3-none-any.whl
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && python /tmp/pip-26.2.2-py3-none-any.whl/pip install --no-cache-dir --no-index \
+       /tmp/pip-26.2.2-py3-none-any.whl \
+    && rm /tmp/pip-26.2.2-py3-none-any.whl
+
 RUN pip install --no-cache-dir .
 
 # El server expone HTTP/SSE en 8201 (modo por defecto) y stdio con --stdio.
