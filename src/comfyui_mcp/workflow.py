@@ -2,6 +2,9 @@
 
 from typing import Any
 
+from . import config
+from .config import A14B_MODEL
+
 
 def _base_nodes(checkpoint: str, lora: str | None,
                 lora_strength: float) -> tuple[dict, list, list]:
@@ -90,7 +93,7 @@ def build_video(
     (la imagen es el primer frame)."""
     wf: dict[str, Any] = {
         "1": {"class_type": "UNETLoader",
-              "inputs": {"unet_name": unet, "weight_dtype": "default"}},
+              "inputs": {"unet_name": unet, "weight_dtype": "fp8_e4m3fn"}},
         "2": {"class_type": "CLIPLoader",
               "inputs": {"clip_name": clip, "type": "wan"}},
         "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae}},
@@ -108,13 +111,14 @@ def build_video(
             "sampler_name": sampler, "scheduler": scheduler, "denoise": 1.0,
             "model": ["4", 0], "positive": ["5", 0], "negative": ["6", 0],
             "latent_image": ["7", 0]}},
-        "9": {"class_type": "VAEDecode",
-              "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
+        "9": {"class_type": "VAEDecodeTiled", "inputs": {
+            "samples": ["8", 0], "vae": ["3", 0], "tile_size": 512,
+            "overlap": 64, "temporal_size": 64, "temporal_overlap": 8}},
         "10": {"class_type": "CreateVideo",
                "inputs": {"images": ["9", 0], "fps": fps}},
         "11": {"class_type": "SaveVideo", "inputs": {
             "video": ["10", 0], "filename_prefix": filename_prefix,
-            "format": "auto", "codec": "auto"}},
+            "format": "mp4", "codec": "h264"}},
     }
     if image_path:
         wf["12"] = {"class_type": "LoadImage", "inputs": {"image": image_path}}
@@ -123,6 +127,56 @@ def build_video(
         wf["13"] = {"class_type": "ImageFromBatch",
                     "inputs": {"image": ["9", 0], "batch_index": 0, "length": 1}}
         _add_preview(wf, ["13", 0])
+    return wf
+
+
+def build_a14b_video(
+    prompt: str, negative: str, image_path: str, width: int, height: int,
+    length: int, seed: int, filename_prefix: str, preview: bool = False,
+) -> dict:
+    """Wan A14B I2V GGUF, dos etapas de lightx2v en cuatro pasos."""
+    if not image_path:
+        raise ValueError("A14B I2V requiere image_filename")
+    if (width, height) not in config.A14B_ASPECTS.values() or length < 1 or length % 4 != 1:
+        raise ValueError("A14B admite solo tamaños configurados y frames 4n+1")
+    wf: dict[str, Any] = {
+        "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": A14B_MODEL["high"]}},
+        "1b": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": A14B_MODEL["low"]}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": config.A14B_CLIP, "type": "wan"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": config.A14B_VAE}},
+        "4": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["20", 0], "shift": 5.0}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["2", 0]}},
+        "12": {"class_type": "LoadImage", "inputs": {"image": image_path}},
+        "10": {"class_type": "CreateVideo", "inputs": {"images": ["9", 0], "fps": config.A14B_FPS}},
+        "11": {"class_type": "SaveVideo", "inputs": {
+            "video": ["10", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    if preview:
+        wf["13"] = {"class_type": "ImageFromBatch", "inputs": {
+            "image": ["9", 0], "batch_index": 0, "length": 1}}
+        _add_preview(wf, ["13", 0])
+    for loader, model, lora in (("20", "1", "lora_high"), ("20b", "1b", "lora_low")):
+        wf[loader] = {"class_type": "LoraLoaderModelOnly", "inputs": {
+            "model": [model, 0], "lora_name": A14B_MODEL[lora], "strength_model": 1.0}}
+    wf["4b"] = {"class_type": "ModelSamplingSD3", "inputs": {"model": ["20b", 0], "shift": 5.0}}
+    wf["7"] = {"class_type": "WanImageToVideo", "inputs": {
+        "positive": ["5", 0], "negative": ["6", 0], "vae": ["3", 0],
+        "start_image": ["12", 0], "width": width, "height": height,
+        "length": length, "batch_size": 1}}
+    sampler = {"steps": 4, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple",
+               "noise_seed": seed, "positive": ["7", 0], "negative": ["7", 1]}
+    wf["8a"] = {"class_type": "KSamplerAdvanced", "inputs": {
+        **sampler, "model": ["4", 0], "latent_image": ["7", 2],
+        "add_noise": "enable", "start_at_step": 0, "end_at_step": 2,
+        "return_with_leftover_noise": "enable"}}
+    wf["8"] = {"class_type": "KSamplerAdvanced", "inputs": {
+        **sampler, "model": ["4b", 0], "latent_image": ["8a", 0],
+        "add_noise": "disable", "start_at_step": 2, "end_at_step": 10000,
+        "return_with_leftover_noise": "disable"}}
+    wf["9"] = {"class_type": "VAEDecode", "inputs": {
+        "samples": ["8", 0], "vae": ["3", 0]}}
     return wf
 
 

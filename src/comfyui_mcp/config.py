@@ -13,7 +13,7 @@ _WAKE_POLL_S = 2
 
 DEFAULT_TIMEOUT = 15.0
 GENERATE_TIMEOUT = 600.0  # primera carga de un checkpoint SDXL (6.5GB) + sampling
-VIDEO_TIMEOUT = 1800.0  # Wan 2.2 5B en la 3060 con offload: varios minutos por clip
+VIDEO_TIMEOUT = float(os.getenv("VIDEO_TIMEOUT_SECONDS", "4200"))
 
 DEFAULT_NEGATIVE = (
     "low quality, worst quality, blurry, jpeg artifacts, watermark, text, "
@@ -63,7 +63,7 @@ VIDEO_MODEL = {
     "unet": "wan2.2_ti2v_5B_fp16.safetensors",
     "clip": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
     "vae": "wan2.2_vae.safetensors",
-    "steps": 20, "cfg": 5.0, "sampler": "uni_pc", "scheduler": "simple", "shift": 8.0,
+    "steps": 30, "cfg": 5.0, "sampler": "uni_pc", "scheduler": "simple", "shift": 8.0,
 }
 VIDEO_FPS = 24
 VIDEO_MAX_SECONDS = 5  # entrenado con clips de 121 frames
@@ -74,13 +74,21 @@ VIDEO_ASPECTS = {
     "9:16": (704, 1280),
     "1:1": (960, 960),
 }
-# Borrador: ~0.4MP, menos de la mitad de píxeles que 720p, para iterar el
-# prompt rápido y después sacar la versión final.
-VIDEO_DRAFT_ASPECTS = {
-    "16:9": (832, 480),
-    "9:16": (480, 832),
-    "1:1": (640, 640),
+# Borrador 5B: misma resolución, pero máximo 2 s (49 frames) en vez de 5 s.
+VIDEO_DRAFT_MAX_SECONDS = 2
+
+# I2V A14B validado solo en 480x832 (o transpuesto), 16 fps, 4 pasos.
+A14B_MODEL = {
+    "high": "Wan2.2-I2V-A14B-HighNoise-Q4_K_S.gguf",
+    "low": "Wan2.2-I2V-A14B-LowNoise-Q4_K_S.gguf",
+    "lora_high": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+    "lora_low": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
 }
+A14B_CLIP = VIDEO_MODEL["clip"]
+A14B_VAE = "wan_2.1_vae.safetensors"
+A14B_ASPECTS = {"16:9": (832, 480), "9:16": (480, 832)}
+A14B_FPS = 16
+A14B_TIMEOUT = float(os.getenv("A14B_TIMEOUT_SECONDS", "2700"))
 
 # El negativo del workflow oficial de Wan (umT5 es multilingüe).
 VIDEO_NEGATIVE = (

@@ -1,6 +1,15 @@
 """Tests de config: presets y aspects válidos."""
+import os
+import subprocess
+import sys
 
-from comfyui_mcp.config import ASPECTS, PRESETS, VIDEO_ASPECTS, VIDEO_DRAFT_ASPECTS
+from comfyui_mcp.config import (
+    ASPECTS,
+    PRESETS,
+    VIDEO_ASPECTS,
+    VIDEO_DRAFT_MAX_SECONDS,
+    VIDEO_FPS,
+)
 
 
 def test_presets_requeridos():
@@ -22,12 +31,19 @@ def test_aspects_1mp():
 
 
 def test_video_aspects_son_multiplos_de_32():
-    for name, (w, h) in [*VIDEO_ASPECTS.items(), *VIDEO_DRAFT_ASPECTS.items()]:
+    for name, (w, h) in VIDEO_ASPECTS.items():
         assert w % 32 == 0 and h % 32 == 0, f"{name} {w}x{h} no es múltiplo de 32"
 
 
-def test_borrador_tiene_los_mismos_aspects_y_menos_pixeles():
-    assert VIDEO_DRAFT_ASPECTS.keys() == VIDEO_ASPECTS.keys()
-    for name, (w, h) in VIDEO_DRAFT_ASPECTS.items():
-        full_w, full_h = VIDEO_ASPECTS[name]
-        assert w * h < full_w * full_h / 2, f"{name}: el borrador no ahorra la mitad"
+def test_borrador_limita_duracion_sin_cambiar_aspects():
+    assert VIDEO_DRAFT_MAX_SECONDS * VIDEO_FPS + 1 == 49
+
+
+def test_timeouts_video_se_configuran_sin_alterar_imagen():
+    env = {**os.environ, "VIDEO_TIMEOUT_SECONDS": "4600",
+           "A14B_TIMEOUT_SECONDS": "2900"}
+    script = ("from comfyui_mcp.config import VIDEO_TIMEOUT, A14B_TIMEOUT, GENERATE_TIMEOUT; "
+              "print(VIDEO_TIMEOUT, A14B_TIMEOUT, GENERATE_TIMEOUT)")
+    result = subprocess.run([sys.executable, "-c", script],
+        env=env, check=True, capture_output=True, text=True)
+    assert result.stdout.strip() == "4600.0 2900.0 600.0"
