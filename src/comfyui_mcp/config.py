@@ -13,7 +13,7 @@ _WAKE_POLL_S = 2
 
 DEFAULT_TIMEOUT = 15.0
 GENERATE_TIMEOUT = 600.0  # primera carga de un checkpoint SDXL (6.5GB) + sampling
-VIDEO_TIMEOUT = 3000.0  # 5B 720p/121 frames: benchmark local hasta 1903.6 s; margen para cola/carga
+VIDEO_TIMEOUT = float(os.getenv("VIDEO_TIMEOUT_SECONDS", "4200"))
 
 DEFAULT_NEGATIVE = (
     "low quality, worst quality, blurry, jpeg artifacts, watermark, text, "
@@ -84,9 +84,11 @@ A14B_MODEL = {
     "lora_high": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
     "lora_low": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
 }
+A14B_CLIP = VIDEO_MODEL["clip"]
+A14B_VAE = "wan_2.1_vae.safetensors"
 A14B_ASPECTS = {"16:9": (832, 480), "9:16": (480, 832)}
 A14B_FPS = 16
-A14B_TIMEOUT = 1800.0
+A14B_TIMEOUT = float(os.getenv("A14B_TIMEOUT_SECONDS", "2700"))
 
 # El negativo del workflow oficial de Wan (umT5 es multilingüe).
 VIDEO_NEGATIVE = (

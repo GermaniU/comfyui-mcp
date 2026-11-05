@@ -47,7 +47,8 @@ async def submit_prompt(workflow: dict) -> str:
 
 async def wait_for_result(prompt_id: str, timeout: float) -> dict:
     """Espera a que termine la generación y devuelve la entrada de /history.
-    Si vence el timeout la saca de la cola para que no siga ocupando la GPU."""
+    Al vencer, intenta retirar el prompt pendiente e interrumpir la ejecución;
+    la cancelación no está garantizada (ComfyUI puede seguir trabajando)."""
     deadline = time.monotonic() + timeout
     async with _client(timeout=30.0) as c:
         while time.monotonic() < deadline:
@@ -60,7 +61,11 @@ async def wait_for_result(prompt_id: str, timeout: float) -> dict:
                 if status.get("status_str") == "error":
                     msgs = [m for m in status.get("messages", [])
                             if m[0] == "execution_error"]
-                    detail = msgs[0][1].get("exception_message") if msgs else "?"
+                    error = msgs[0][1] if msgs else {}
+                    detail = (f"nodo {error.get('node_id', '?')} "
+                              f"({error.get('node_type') or error.get('class_type', '?')}): "
+                              f"{error.get('exception_type', 'error')} — "
+                              f"{error.get('exception_message') or 'sin detalle'}")
                     raise RuntimeError(f"ComfyUI reportó error: {detail}")
                 if entry.get("outputs"):
                     return entry

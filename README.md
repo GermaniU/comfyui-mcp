@@ -98,6 +98,8 @@ Crea un archivo `.env` o exporta las siguientes variables:
 | `MCP_PORT` | `8201` | Puerto HTTP/SSE del servidor MCP. |
 | `MCP_AUTH_TOKEN` | *(vacío = sin auth)* | Si se define, exige header `Authorization: Bearer <token>` en cada request HTTP/SSE. |
 | `MCP_CORS_ORIGINS` | `*` | Orígenes CORS permitidos, separados por coma. Solo afecta a clientes que corren en un navegador. |
+| `VIDEO_TIMEOUT_SECONDS` | `4200` | Espera máxima 5B tras enviar el prompt (incluye cola y carga fría). |
+| `A14B_TIMEOUT_SECONDS` | `2700` | Espera máxima A14B tras enviar el prompt (incluye cola y carga fría). |
 
 > **Seguridad:** sin `MCP_AUTH_TOKEN`, cualquier equipo de la LAN —o una página web abierta en un navegador de la LAN, con CORS `*`— puede generar imágenes y ocupar la GPU. Definir un token es lo recomendado salvo en redes totalmente confiables.
 
@@ -135,14 +137,16 @@ Genera MP4 de 1-5 s. Sin imagen usa Wan 2.2 TI2V 5B (~720p, 24 fps, 30 pasos uni
 
 - **Parámetros**:
   - `prompt` (*string*, requerido): Escena y movimiento, preferentemente en inglés.
-  - `aspect` (*string*, opcional): A14B `16:9` (832×480) o `9:16` (480×832); 5B `16:9` (1280×704), `9:16` (704×1280) o `1:1` (960×960). Default `"16:9"`; A14B rechaza `1:1`.
+  - `aspect` (*string*, opcional): A14B `16:9` (832×480) o `9:16` (480×832); 5B `16:9` (1280×704), `9:16` (704×1280) o `1:1` (960×960). Default `"16:9"`; A14B explícito rechaza `1:1` y `auto` elige 5B.
   - `seconds` (*integer*, opcional): 1-5 (se recorta fuera del rango); A14B 16 fps + 1 frame (5 s = 81), 5B 24 fps + 1 (5 s = 121). Default `3`.
-  - `image_filename` (*string*, opcional): Imagen generada a animar desde `[output]`; conviene igualar la orientación. Con imagen `model="auto"` elige A14B; sin imagen elige 5B.
+  - `image_filename` (*string*, opcional): Imagen generada a animar desde `[output]`; conviene igualar la orientación. `auto` elige A14B solo con imagen, parámetros compatibles y nodos/pesos disponibles en ComfyUI; de lo contrario usa 5B e indica el motivo. Sin imagen usa 5B.
   - `model` (*string*, opcional): `auto` (default), `a14b` (requiere imagen) o `5b` (conserva la ruta I2V previa y T2V). No cambia los argumentos anteriores.
   - `draft` (*bool*, opcional): Solo 5B: mantiene la resolución ~720p y recorta a un máximo de 2 s (49 frames a 24 fps); no reduce resolución ni tiene tiempo medido. A14B rechaza `draft=true`.
-  - `steps`, `cfg`: A14B fija `4` y `1` con LoRA lightx2v; si indicas otros valores devuelve error. 5B usa 30 y 5 por defecto; valores explícitos los sustituyen.
+  - `steps`, `cfg`: A14B fija `4` y `1` con LoRA lightx2v; valores incompatibles con A14B explícito devuelven error, mientras `auto` elige 5B. 5B usa 30 y 5 por defecto; valores explícitos los sustituyen.
   - `negative_prompt`, `seed`, `filename_prefix` (opcionales). Default de prefijo `"mcp-video"`.
   - `preview` (*bool*, opcional): Miniatura JPEG del primer frame.
+
+Los timeouts se configuran al iniciar el servidor con las variables anteriores: cuentan desde el envío, incluyendo cola, carga y generación; no garantizan un tiempo de respuesta ni una cancelación efectiva. Al vencer se intenta retirar el prompt de la cola e interrumpir ComfyUI, pero el trabajo puede continuar y la interrupción de ComfyUI puede afectar otra ejecución concurrente. Ajusta los límites según carga real y timeout del cliente MCP. `negative_prompt=null` usa el negativo por defecto; `""` lo desactiva.
 
 ### 4. `list_models`
 Retorna la lista de checkpoints, LoRAs y presets disponibles en la instancia de ComfyUI.

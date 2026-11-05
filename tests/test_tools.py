@@ -1,10 +1,17 @@
 """Tests de tools: URLs de vista y resolución de presets."""
 
 import httpx
+import pytest
 from fastmcp import Client
 
 from comfyui_mcp import comfy_client, gpu_arbiter
-from comfyui_mcp.config import COMFY_PUBLIC_URL
+from comfyui_mcp.config import (
+    A14B_MODEL,
+    A14B_TIMEOUT,
+    COMFY_PUBLIC_URL,
+    VIDEO_MODEL,
+    VIDEO_TIMEOUT,
+)
 from comfyui_mcp.server import mcp
 from comfyui_mcp.tools import img2img as img2img_tool
 from comfyui_mcp.tools.generate import generate_image, resolve_preset
@@ -65,10 +72,24 @@ async def _capturar_workflow(monkeypatch, tool, **kw):
     monkeypatch.setattr(comfy_client, "submit_prompt", submit)
     monkeypatch.setattr(comfy_client, "wait_for_result", result)
     monkeypatch.setattr(comfy_client, "view_jpeg", jpeg)
+    monkeypatch.setattr(comfy_client, "object_info", _a14b_info)
     salida = await tool(**kw)
     if expected_timeout is not None:
         assert enviado.pop("_timeout", None) == expected_timeout
     return enviado, salida
+
+
+async def _a14b_info(node):
+    choices = {
+        "UnetLoaderGGUF": ("unet_name", [A14B_MODEL["high"], A14B_MODEL["low"]]),
+        "LoraLoaderModelOnly": ("lora_name", [A14B_MODEL["lora_high"], A14B_MODEL["lora_low"]]),
+        "CLIPLoader": ("clip_name", [VIDEO_MODEL["clip"]]),
+        "VAELoader": ("vae_name", ["wan_2.1_vae.safetensors"]),
+    }
+    if node in choices:
+        field, names = choices[node]
+        return {node: {"input": {"required": {field: [names]}}}}
+    return {node: {"input": {"required": {}}}}
 
 
 async def test_generate_rapido_lleva_lora_a_fuerza_completa(monkeypatch):
@@ -135,7 +156,7 @@ async def test_video_5b_timeout_y_preset_por_mcp(monkeypatch):
             return await c.call_tool("generate_video", kw)
 
     wf, result = await _capturar_workflow(
-        monkeypatch, call, prompt="a cat", seconds=5, _expected_timeout=3000.0)
+        monkeypatch, call, prompt="a cat", seconds=5, _expected_timeout=VIDEO_TIMEOUT)
     assert wf["7"]["inputs"]["length"] == 121
     assert wf["10"]["inputs"]["fps"] == 24
     assert wf["8"]["inputs"]["steps"] == 30
@@ -203,6 +224,7 @@ async def test_video_a14b_timeout_y_error_dependencias(monkeypatch):
     async def submit(wf):
         raise RuntimeError("ComfyUI rechazó el workflow: UnetLoaderGGUF: Node not found")
     monkeypatch.setattr(gpu_arbiter, "ensure_comfyui_running", despierto)
+    monkeypatch.setattr(comfy_client, "object_info", _a14b_info)
     monkeypatch.setattr(comfy_client, "submit_prompt", submit)
     result = await generate_video(prompt="motion", image_filename="base.png")
     assert "ComfyUI-GGUF" in result
@@ -210,11 +232,141 @@ async def test_video_a14b_timeout_y_error_dependencias(monkeypatch):
     async def submitted(wf):
         return "pid"
     async def wait(prompt_id, timeout):
-        assert timeout >= 900
+        assert timeout == A14B_TIMEOUT
         return {"outputs": {"11": {"videos": []}}}
     monkeypatch.setattr(comfy_client, "submit_prompt", submitted)
     monkeypatch.setattr(comfy_client, "wait_for_result", wait)
-    await generate_video(prompt="motion", image_filename="base.png")
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "A14B" in result and "Error" not in result
+
+
+@pytest.mark.parametrize("kw", [
+    {"draft": True}, {"aspect": "1:1"}, {"steps": 8}, {"cfg": 3.0},
+])
+async def test_video_auto_historico_elige_5b(monkeypatch, kw):
+    wf, result = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="motion", image_filename="base.png", **kw)
+    assert wf["1"]["class_type"] == "UNETLoader"
+    assert "5B" in result and "auto" in result
+
+
+async def test_video_auto_fallback_si_falta_archivo(monkeypatch):
+    async def missing(node):
+        info = await _a14b_info(node)
+        if node == "UnetLoaderGGUF":
+            info[node]["input"]["required"]["unet_name"][0].remove(A14B_MODEL["low"])
+        return info
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    monkeypatch.setattr(comfy_client, "object_info", missing)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "5B" in result and A14B_MODEL["low"] in result
+
+
+async def test_video_a14b_explicito_reporta_dependencias(monkeypatch):
+    async def missing(node):
+        return {} if node == "UnetLoaderGGUF" else await _a14b_info(node)
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    monkeypatch.setattr(comfy_client, "object_info", missing)
+    result = await generate_video(prompt="motion", image_filename="base.png", model="a14b")
+    assert "UnetLoaderGGUF" in result and "SERVER_SETUP" in result
+
+
+async def test_video_info_conectividad_no_es_fallback(monkeypatch):
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    async def offline(node):
+        raise httpx.ConnectError("connection refused")
+    monkeypatch.setattr(comfy_client, "object_info", offline)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "ConnectError" in result and "5B" not in result
+
+
+async def test_video_auto_fallback_si_nodo_404(monkeypatch):
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    async def missing(node):
+        if node == "UnetLoaderGGUF":
+            request = httpx.Request("GET", "http://comfy/object_info/UnetLoaderGGUF")
+            raise httpx.HTTPStatusError("not found", request=request,
+                                        response=httpx.Response(404, request=request))
+        return await _a14b_info(node)
+    monkeypatch.setattr(comfy_client, "object_info", missing)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "5B" in result and "UnetLoaderGGUF" in result
+
+
+@pytest.mark.parametrize("node,field,filename", [
+    ("LoraLoaderModelOnly", "lora_name", A14B_MODEL["lora_low"]),
+    ("CLIPLoader", "clip_name", VIDEO_MODEL["clip"]),
+    ("VAELoader", "vae_name", "wan_2.1_vae.safetensors"),
+])
+async def test_video_fallback_si_falta_cualquier_peso(monkeypatch, node, field, filename):
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    async def missing(candidate):
+        info = await _a14b_info(candidate)
+        if candidate == node:
+            info[node]["input"]["required"][field][0].remove(filename)
+        return info
+    monkeypatch.setattr(comfy_client, "object_info", missing)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "5B" in result and filename in result
+
+
+async def test_video_error_sin_nombre_nodo_da_guia_sin_atribucion(monkeypatch):
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    monkeypatch.setattr(comfy_client, "object_info", _a14b_info)
+    async def rejected(wf):
+        raise RuntimeError("ComfyUI rechazó el workflow: file is invalid")
+    monkeypatch.setattr(comfy_client, "submit_prompt", rejected)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "file is invalid" in result and "logs" in result
+    assert "verifica ComfyUI-GGUF instalado" not in result
+
+
+@pytest.mark.parametrize("model,image", [("5b", None), ("a14b", "base.png")])
+async def test_video_negativo_vacio_y_seed_cero(monkeypatch, model, image):
+    wf, result = await _capturar_workflow(monkeypatch, generate_video,
+        prompt="motion", model=model, image_filename=image, negative_prompt="", seed=0,
+        _expected_timeout=A14B_TIMEOUT if image else VIDEO_TIMEOUT)
+    assert wf["6"]["inputs"]["text"] == ""
+    assert "seed 0" in result
+
+
+@pytest.mark.parametrize("model,image", [("5b", None), ("a14b", "base.png")])
+async def test_video_negativo_none_y_seed_uint64(monkeypatch, model, image):
+    from comfyui_mcp.config import VIDEO_NEGATIVE
+
+    wf, result = await _capturar_workflow(monkeypatch, generate_video,
+        prompt="motion", model=model, image_filename=image, seed=2**64 - 1)
+    assert wf["6"]["inputs"]["text"] == VIDEO_NEGATIVE
+    assert f"seed {2**64 - 1}" in result
+
+
+async def test_video_seed_bool_no_despierta(monkeypatch):
+    async def no_wake():
+        raise AssertionError("no debe encender GPU")
+    monkeypatch.setattr(gpu_arbiter, "ensure_comfyui_running", no_wake)
+    for seed in (True, False):
+        assert "seed debe ser un entero" in await generate_video(prompt="motion", seed=seed)
+
+
+async def test_video_wait_error_sin_clase_no_culpa_dependencias(monkeypatch):
+    await _capturar_workflow(monkeypatch, generate_video, prompt="motion", model="5b")
+    monkeypatch.setattr(comfy_client, "object_info", _a14b_info)
+    async def fail(prompt_id, timeout):
+        raise RuntimeError("ComfyUI reportó error: CUDA out of memory")
+    monkeypatch.setattr(comfy_client, "wait_for_result", fail)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "CUDA out of memory" in result and "ComfyUI-GGUF" not in result
+
+
+async def test_wait_error_incluye_nodo_y_tipo_sin_mensaje(monkeypatch):
+    data = {"pid": {"status": {"status_str": "error", "messages": [
+        ["execution_error", {"node_id": "1", "node_type": "UnetLoaderGGUF",
+                              "exception_type": "RuntimeError", "exception_message": ""}]]}}}
+    monkeypatch.setattr(comfy_client, "_client", lambda timeout=None: httpx.AsyncClient(
+        base_url="http://comfy", transport=httpx.MockTransport(
+            lambda r: httpx.Response(200, json=data))))
+    with pytest.raises(RuntimeError, match="UnetLoaderGGUF.*RuntimeError"):
+        await comfy_client.wait_for_result("pid", 1)
 
 
 async def test_timeout_saca_el_prompt_de_la_cola(monkeypatch):

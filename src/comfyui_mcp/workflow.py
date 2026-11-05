@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from . import config
 from .config import A14B_MODEL
 
 
@@ -136,20 +137,29 @@ def build_a14b_video(
     """Wan A14B I2V GGUF, dos etapas de lightx2v en cuatro pasos."""
     if not image_path:
         raise ValueError("A14B I2V requiere image_filename")
-    if (width, height) not in ((480, 832), (832, 480)) or length < 1 or length % 4 != 1:
-        raise ValueError("A14B admite solo 480x832/832x480 y frames 4n+1")
-    wf = build_video(
-        prompt, negative, A14B_MODEL["high"],
-        "umt5_xxl_fp8_e4m3fn_scaled.safetensors", "wan_2.1_vae.safetensors",
-        width, height, length, 16, 4, 1.0, "euler", "simple", 5.0,
-        seed, filename_prefix, image_path, preview,
-    )
-    wf["1"] = {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": A14B_MODEL["high"]}}
-    wf["1b"] = {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": A14B_MODEL["low"]}}
+    if (width, height) not in config.A14B_ASPECTS.values() or length < 1 or length % 4 != 1:
+        raise ValueError("A14B admite solo tamaños configurados y frames 4n+1")
+    wf: dict[str, Any] = {
+        "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": A14B_MODEL["high"]}},
+        "1b": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": A14B_MODEL["low"]}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": config.A14B_CLIP, "type": "wan"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": config.A14B_VAE}},
+        "4": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["20", 0], "shift": 5.0}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["2", 0]}},
+        "12": {"class_type": "LoadImage", "inputs": {"image": image_path}},
+        "10": {"class_type": "CreateVideo", "inputs": {"images": ["9", 0], "fps": config.A14B_FPS}},
+        "11": {"class_type": "SaveVideo", "inputs": {
+            "video": ["10", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    if preview:
+        wf["13"] = {"class_type": "ImageFromBatch", "inputs": {
+            "image": ["9", 0], "batch_index": 0, "length": 1}}
+        _add_preview(wf, ["13", 0])
     for loader, model, lora in (("20", "1", "lora_high"), ("20b", "1b", "lora_low")):
         wf[loader] = {"class_type": "LoraLoaderModelOnly", "inputs": {
             "model": [model, 0], "lora_name": A14B_MODEL[lora], "strength_model": 1.0}}
-    wf["4"]["inputs"]["model"] = ["20", 0]
     wf["4b"] = {"class_type": "ModelSamplingSD3", "inputs": {"model": ["20b", 0], "shift": 5.0}}
     wf["7"] = {"class_type": "WanImageToVideo", "inputs": {
         "positive": ["5", 0], "negative": ["6", 0], "vae": ["3", 0],
@@ -167,7 +177,6 @@ def build_a14b_video(
         "return_with_leftover_noise": "disable"}}
     wf["9"] = {"class_type": "VAEDecode", "inputs": {
         "samples": ["8", 0], "vae": ["3", 0]}}
-    wf["11"]["inputs"].update(format="mp4", codec="h264")
     return wf
 
 

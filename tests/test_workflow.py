@@ -174,3 +174,21 @@ def test_a14b_grafo_dos_etapas_con_imagen_y_preview():
     assert wf["10"]["inputs"] == {"images": ["9", 0], "fps": 16}
     assert wf["11"]["inputs"] == {"video": ["10", 0], "filename_prefix": "clip", "format": "mp4", "codec": "h264"}
     assert wf["13"]["inputs"]["image"] == ["9", 0]
+
+
+def test_a14b_usa_config_y_no_llama_builder_5b(monkeypatch):
+    from comfyui_mcp import config, workflow
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("A14B no debe llamar build_video")
+
+    monkeypatch.setattr(workflow, "build_video", forbidden)
+    monkeypatch.setattr(config, "A14B_ASPECTS", {"9:16": (512, 896)})
+    monkeypatch.setattr(config, "A14B_FPS", 20)
+    monkeypatch.setattr(config, "A14B_CLIP", "other-clip.safetensors")
+    monkeypatch.setattr(config, "A14B_VAE", "other-vae.safetensors")
+    wf = workflow.build_a14b_video("motion", "bad", "base.png", 512, 896, 81, 1, "clip")
+    assert wf["10"]["inputs"]["fps"] == 20
+    assert wf["7"]["inputs"]["width"] == 512
+    assert wf["2"]["inputs"]["clip_name"] == "other-clip.safetensors"
+    assert wf["3"]["inputs"]["vae_name"] == "other-vae.safetensors"
