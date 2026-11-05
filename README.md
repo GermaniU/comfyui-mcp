@@ -16,6 +16,8 @@
 [![FastMCP](https://img.shields.io/badge/FastMCP-v2.0+-purple.svg)](https://github.com/jlowin/fastmcp)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+[![ComfyUI MCP server](https://mcprush.com/badge/comfyui-mcp/card.svg)](https://mcprush.com/to/comfyui-mcp?ref=badge)
+
 **Tags:** `mcp-server` · `comfyui` · `sdxl` · `image-generation` · `ai-agents` · `fastmcp` · `claude-code` · `cursor` · `hermes-gateway` · `gpu-arbiter` · `local-first` · `self-hosted`
 
 <p align="center">
