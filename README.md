@@ -131,16 +131,18 @@ Varía una imagen ya generada (en `output/` de ComfyUI) con un nivel de denoise.
   - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix`, `preview` (opcionales).
 
 ### 3. `generate_video` (Wan 2.2)
-Genera un clip corto MP4 (24fps) con Wan 2.2 TI2V 5B. Sin imagen es txt2video; con `image_filename` anima esa imagen como primer frame. Requiere los modelos de video (ver [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22)). En la RTX 3060 tarda varios minutos por clip.
+Genera MP4 de 1-5 s. Sin imagen usa Wan 2.2 TI2V 5B (~720p, 24 fps, 30 pasos uni_pc/simple, CFG 5, shift 8); con `image_filename` recomienda Wan 2.2 A14B I2V GGUF (16 fps, 480×832 o 832×480). En benchmarks locales de 5 s/121 frames, el 5B fp8 tardó **1620.7–1903.6 s (~27–31.7 min)** en dos escenas/orientaciones; A14B I2V, **489.2 s (~8.2 min)** para 81 frames con una imagen de mapache. Son mediciones, no garantías para otros inputs ni para `draft`. Requiere modelos separados (ver [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22)). No se ha probado aún esta integración MCP contra la GPU real.
 
 - **Parámetros**:
-  - `prompt` (*string*, requerido): Escena y movimiento (de cámara, del sujeto), en inglés.
-  - `aspect` (*string*, opcional): `16:9` (1280x704), `9:16` (704x1280) o `1:1` (960x960). Default: `"16:9"`.
-  - `seconds` (*integer*, opcional): Duración, 1-5. Default: `3`.
-  - `image_filename` (*string*, opcional): Imagen ya generada a animar (ej: `mcp_00001_.png`); conviene que su aspect coincida con el del video.
-  - `draft` (*bool*, opcional): Borrador a ~480p (`832x480`, `480x832`, `640x640`), menos de la mitad de píxeles y bastante más rápido; para probar el prompt antes de la versión final. Default: `false`.
-  - `negative_prompt`, `seed`, `steps`, `cfg`, `filename_prefix` (opcionales). Default de prefijo: `"mcp-video"`.
-  - `preview` (*bool*, opcional): Miniatura JPEG del primer frame. Default: `false`.
+  - `prompt` (*string*, requerido): Escena y movimiento, preferentemente en inglés.
+  - `aspect` (*string*, opcional): A14B `16:9` (832×480) o `9:16` (480×832); 5B `16:9` (1280×704), `9:16` (704×1280) o `1:1` (960×960). Default `"16:9"`; A14B rechaza `1:1`.
+  - `seconds` (*integer*, opcional): 1-5 (se recorta fuera del rango); A14B 16 fps + 1 frame (5 s = 81), 5B 24 fps + 1 (5 s = 121). Default `3`.
+  - `image_filename` (*string*, opcional): Imagen generada a animar desde `[output]`; conviene igualar la orientación. Con imagen `model="auto"` elige A14B; sin imagen elige 5B.
+  - `model` (*string*, opcional): `auto` (default), `a14b` (requiere imagen) o `5b` (conserva la ruta I2V previa y T2V). No cambia los argumentos anteriores.
+  - `draft` (*bool*, opcional): Solo 5B: mantiene la resolución ~720p y recorta a un máximo de 2 s (49 frames a 24 fps); no reduce resolución ni tiene tiempo medido. A14B rechaza `draft=true`.
+  - `steps`, `cfg`: A14B fija `4` y `1` con LoRA lightx2v; si indicas otros valores devuelve error. 5B usa 30 y 5 por defecto; valores explícitos los sustituyen.
+  - `negative_prompt`, `seed`, `filename_prefix` (opcionales). Default de prefijo `"mcp-video"`.
+  - `preview` (*bool*, opcional): Miniatura JPEG del primer frame.
 
 ### 4. `list_models`
 Retorna la lista de checkpoints, LoRAs y presets disponibles en la instancia de ComfyUI.
@@ -238,4 +240,4 @@ uv run --with pytest --with pytest-asyncio pytest
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+Este código MCP está bajo la Licencia MIT ([LICENSE](LICENSE)); **no** licencia los modelos ni los distribuye. Los repositorios originales de [Wan 2.2 TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) y [Wan 2.2 I2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B) declaran Apache 2.0 para sus modelos. Los empaquetados ComfyUI, GGUF y LoRA de terceros pueden tener términos propios: verifica las licencias de cada distribución antes de descargarlos, redistribuirlos o usarlos comercialmente. Requisitos y nombres de archivos en [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22).

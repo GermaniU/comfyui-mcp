@@ -133,15 +133,15 @@ async def _img2img(
 @mcp.tool(
     name="generate_video",
     description=(
-        "Genera un clip corto (1-5s, 24fps, MP4) con Wan 2.2 en la RTX 3060. Sin "
-        "image_filename es txt2video; con image_filename (una imagen ya generada, "
-        "ej: mcp_00001_.png) la anima usándola como primer frame — conviene que su "
-        "aspect coincida con el del video. aspect: 16:9, 9:16 o 1:1. Tarda varios "
-        "minutos (más la primera vez por carga del modelo); describir la escena y el "
-        "movimiento de cámara en inglés. draft=true genera a ~480p, bastante más "
-        "rápido: útil para probar el prompt antes de la versión final. Devuelve "
-        "filename + URL de descarga. "
-        "preview=true devuelve además una miniatura JPEG del primer frame."
+        "Genera clips de 1-5s. Sin imagen: Wan 2.2 TI2V 5B ~720p/24fps, "
+        "30 pasos fp8 (5s: ~27-31.7 min medidos, no garantía); con "
+        "image_filename [output]: A14B I2V 480x832/832x480 a 16fps "
+        "(recomendado), 4 pasos, ~8.2 min medidos para 5s en un caso. "
+        "model='5b' preserva I2V anterior; model='a14b' exige imagen. "
+        "A14B admite 16:9 y 9:16, no 1:1 ni draft; steps=4 cfg=1 fijos. "
+        "5B admite 16:9, 9:16 y 1:1; draft=true conserva resolución "
+        "pero limita a 2s/49 frames, solo para 5B. "
+        "Devuelve filename y URL; preview=true añade miniatura."
     ),
     output_schema=None,
 )
@@ -157,12 +157,13 @@ async def _generate_video(
     filename_prefix: str = "mcp-video",
     draft: bool = False,
     preview: bool = False,
+    model: str = "auto",
 ) -> str | list:
     return await generate_video(
         prompt=prompt, aspect=aspect, seconds=seconds,
         image_filename=image_filename, negative_prompt=negative_prompt,
         seed=seed, steps=steps, cfg=cfg, filename_prefix=filename_prefix,
-        draft=draft, preview=preview,
+        draft=draft, preview=preview, model=model,
     )
 
 

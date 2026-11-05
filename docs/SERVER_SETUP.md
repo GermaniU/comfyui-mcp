@@ -74,7 +74,7 @@ curl -L -o juggernautXL_ragnarokBy.safetensors "https://civitai.com/api/download
 
 ## 🎬 Step 2b: Modelos de Video (Wan 2.2)
 
-`generate_video` usa Wan 2.2 TI2V 5B con nodos nativos de ComfyUI (sin custom nodes; requiere un ComfyUI con soporte de Wan 2.2, julio 2025 en adelante). Son ~17GB en disco; con el offload de ComfyUI el modelo entra en los 12GB de la 3060, pero mientras genera necesita la GPU entera (el broker baja a llama-server igual que con SDXL).
+`generate_video` sin imagen usa Wan 2.2 TI2V 5B con nodos nativos de ComfyUI (sin custom nodes; requiere una versión con soporte de Wan 2.2). Mantiene el archivo fp16 existente, pero `UNETLoader` lo carga con `weight_dtype=fp8_e4m3fn`: el benchmark C_fp8 logró 121 frames/5 s a 24 fps en 1280×704 o 704×1280, 30 pasos uni_pc/simple, CFG 5, shift 8 y `VAEDecodeTiled` (tile 512, overlap 64, temporal 64/8). Son ~17 GB de pesos en disco; la carga fp8 con offload se midió en una RTX 3060 de 12 GB, pero el consumo cambia con el host y la carga concurrente. El broker libera la GPU igual que con SDXL. El timeout MCP de 5B es 3000 s. Dos corridas C_fp8 medidas tardaron 1620.7–1903.6 s (~27–31.7 min) para 5 s, no una promesa de rendimiento. `draft` conserva la resolución y limita el clip a 2 s/49 frames; esa variante no fue medida. La generación E2E por MCP queda pendiente.
 
 ```
 ~/stack/comfyui/models/
@@ -96,6 +96,23 @@ curl -L -o text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors \
 curl -L -o vae/wan2.2_vae.safetensors \
   "$HF/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors"
 ```
+
+---
+
+## A14B I2V 480p (opción recomendada con imagen)
+
+Requiere [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) instalado como custom node en ComfyUI (el nodo `UnetLoaderGGUF`); además de nodos Wan I2V, `KSamplerAdvanced`, `LoraLoaderModelOnly` y `SaveVideo`. Ubicar los archivos **con estos nombres exactos**:
+
+```
+models/unet/Wan2.2-I2V-A14B-HighNoise-Q4_K_S.gguf
+models/unet/Wan2.2-I2V-A14B-LowNoise-Q4_K_S.gguf
+models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
+models/vae/wan_2.1_vae.safetensors
+models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
+```
+
+No descargar ni modificar los pesos automáticamente: consulta las páginas de origen, sus licencias y términos antes de instalarlos. La licencia MIT de **este código MCP** no cubre los pesos Wan, los GGUF derivados ni las LoRA. Los repositorios originales [TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) e [I2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B) declaran Apache 2.0 para esos modelos; [Comfy-Org repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged) identifica los pesos adaptados para ComfyUI. Revisa además los términos propios del GGUF distribuido por terceros (consulta el repositorio exacto de los archivos instalados) y de las [LoRA lightx2v](https://huggingface.co/lightx2v/Wan2.2-Distill-Loras) para redistribución y uso comercial. El workflow A14B coincide con el benchmark local: 4 pasos (2 high + 2 low), CFG 1, shift 5, euler/simple, 16 fps y 480×832 o transpuesto. Un único run con imagen de mapache y 81 frames tardó 489.2 s; no extrapolar a otros clips. La validación E2E de esta integración a través de MCP sigue pendiente; los tiempos anteriores corresponden al workflow de benchmark, no a una ejecución de esta versión del servidor MCP.
 
 ---
 

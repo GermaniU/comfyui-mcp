@@ -40,6 +40,7 @@ def test_params_explicitos_pisan_al_preset():
 
 async def _capturar_workflow(monkeypatch, tool, **kw):
     enviado = {}
+    expected_timeout = kw.pop("_expected_timeout", None)
 
     async def despierto():
         return None
@@ -49,6 +50,8 @@ async def _capturar_workflow(monkeypatch, tool, **kw):
         return "pid"
 
     async def result(prompt_id, timeout):
+        if expected_timeout is not None:
+            enviado["_timeout"] = timeout
         return {"outputs": {
             "9": {"images": [{"filename": "x_00001_.png", "subfolder": "", "type": "output"}]},
             "16": {"images": [{"filename": "p_00001_.png", "subfolder": "", "type": "temp"}]},
@@ -63,6 +66,8 @@ async def _capturar_workflow(monkeypatch, tool, **kw):
     monkeypatch.setattr(comfy_client, "wait_for_result", result)
     monkeypatch.setattr(comfy_client, "view_jpeg", jpeg)
     salida = await tool(**kw)
+    if expected_timeout is not None:
+        assert enviado.pop("_timeout", None) == expected_timeout
     return enviado, salida
 
 
@@ -91,7 +96,7 @@ async def test_video_frames_segun_segundos(monkeypatch):
 async def test_video_anima_imagen_desde_output(monkeypatch):
     wf, salida = await _capturar_workflow(
         monkeypatch, generate_video, prompt="a cat", aspect="9:16",
-        image_filename="base_00001_.png")
+        image_filename="base_00001_.png", model="5b")
     assert wf["12"]["inputs"]["image"] == "base_00001_.png [output]"
     assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (704, 1280)
     assert "img2video base=base_00001_.png" in salida
@@ -117,17 +122,99 @@ async def test_video_preview_por_mcp(monkeypatch):
     assert "x_00001_.png" in r.content[0].text
 
 
-async def test_video_borrador_baja_la_resolucion(monkeypatch):
+async def test_video_borrador_mantiene_resolucion_y_recorta_duracion(monkeypatch):
     wf, salida = await _capturar_workflow(
-        monkeypatch, generate_video, prompt="a cat", aspect="9:16", draft=True)
-    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (480, 832)
-    assert "(borrador)" in salida and "480x832" in salida
+        monkeypatch, generate_video, prompt="a cat", aspect="9:16", seconds=5, draft=True)
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (704, 1280)
+    assert wf["7"]["inputs"]["length"] == 49
+    assert "(borrador)" in salida and "704x1280" in salida and "2s (49 frames" in salida
+
+async def test_video_5b_timeout_y_preset_por_mcp(monkeypatch):
+    async def call(**kw):
+        async with Client(mcp) as c:
+            return await c.call_tool("generate_video", kw)
+
+    wf, result = await _capturar_workflow(
+        monkeypatch, call, prompt="a cat", seconds=5, _expected_timeout=3000.0)
+    assert wf["7"]["inputs"]["length"] == 121
+    assert wf["10"]["inputs"]["fps"] == 24
+    assert wf["8"]["inputs"]["steps"] == 30
+    assert wf["1"]["inputs"]["weight_dtype"] == "fp8_e4m3fn"
+    assert "5B" in result.content[0].text
 
 
 async def test_video_aspect_invalido(monkeypatch):
     _, salida = await _capturar_workflow(
         monkeypatch, generate_video, prompt="a cat", aspect="4:5")
     assert salida.startswith("Aspect desconocido")
+
+
+async def test_video_a14b_auto_y_frames_por_segundos(monkeypatch):
+    wf, salida = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="motion", negative_prompt="no blur",
+        image_filename="base.png", aspect="9:16", seconds=3, seed=42)
+    assert wf["7"]["inputs"]["length"] == 49
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (480, 832)
+    assert wf["6"]["inputs"]["text"] == "no blur"
+    assert wf["8a"]["inputs"]["noise_seed"] == 42
+    assert wf["12"]["inputs"]["image"] == "base.png [output]"
+    assert "A14B" in salida and "16fps" in salida
+
+
+async def test_video_a14b_cinco_segundos_y_horizontal(monkeypatch):
+    wf, _ = await _capturar_workflow(
+        monkeypatch, generate_video, prompt="motion", image_filename="base.png", seconds=5)
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"],
+            wf["7"]["inputs"]["length"]) == (832, 480, 81)
+
+
+async def test_video_a14b_rechaza_incompatibles_antes_de_despertar(monkeypatch):
+    async def no_wake():
+        raise AssertionError("no debe encender GPU")
+    monkeypatch.setattr(gpu_arbiter, "ensure_comfyui_running", no_wake)
+    for kw, expected in (
+        ({"model": "a14b"}, "image_filename"),
+        ({"model": "a14b", "image_filename": "base.png", "aspect": "1:1"}, "16:9"),
+        ({"model": "a14b", "image_filename": "base.png", "steps": 8}, "steps=4"),
+        ({"model": "a14b", "image_filename": "base.png", "cfg": 3.0}, "cfg=1"),
+        ({"model": "a14b", "image_filename": "base.png", "draft": True}, "draft"),
+        ({"model": "unknown"}, "Modelo desconocido"),
+    ):
+        result = await generate_video(prompt="motion", **kw)
+        assert expected in result
+
+
+async def test_video_a14b_selector_mcp(monkeypatch):
+    async def call(**kw):
+        async with Client(mcp) as c:
+            return await c.call_tool("generate_video", kw)
+
+    wf, result = await _capturar_workflow(
+        monkeypatch, call, prompt="motion", image_filename="base.png",
+        model="a14b", preview=True)
+    assert wf["8a"]["class_type"] == "KSamplerAdvanced"
+    assert [block.type for block in result.content] == ["text", "image"]
+    assert "A14B" in result.content[0].text
+
+
+async def test_video_a14b_timeout_y_error_dependencias(monkeypatch):
+    async def despierto():
+        return None
+    async def submit(wf):
+        raise RuntimeError("ComfyUI rechazó el workflow: UnetLoaderGGUF: Node not found")
+    monkeypatch.setattr(gpu_arbiter, "ensure_comfyui_running", despierto)
+    monkeypatch.setattr(comfy_client, "submit_prompt", submit)
+    result = await generate_video(prompt="motion", image_filename="base.png")
+    assert "ComfyUI-GGUF" in result
+
+    async def submitted(wf):
+        return "pid"
+    async def wait(prompt_id, timeout):
+        assert timeout >= 900
+        return {"outputs": {"11": {"videos": []}}}
+    monkeypatch.setattr(comfy_client, "submit_prompt", submitted)
+    monkeypatch.setattr(comfy_client, "wait_for_result", wait)
+    await generate_video(prompt="motion", image_filename="base.png")
 
 
 async def test_timeout_saca_el_prompt_de_la_cola(monkeypatch):

@@ -131,16 +131,18 @@ Varies an already generated image (in ComfyUI's `output/`) with a denoise streng
   - `negative_prompt`, `seed`, `checkpoint`, `lora`, `lora_strength`, `steps`, `cfg`, `filename_prefix`, `preview` (optional).
 
 ### 3. `generate_video` (Wan 2.2)
-Generates a short MP4 clip (24fps) with Wan 2.2 TI2V 5B. Without an image it is txt2video; with `image_filename` it animates that image as the first frame. Needs the video models (see [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22)). On the RTX 3060 a clip takes several minutes.
+Creates a 1-5 s MP4 clip. Without an image, Wan 2.2 TI2V 5B (~720p, 24 fps, 30 steps uni_pc/simple, CFG 5, shift 8); with `image_filename`, recommended Wan 2.2 A14B I2V GGUF at 16 fps (480×832 or 832×480). Local 5 s/121-frame 5B fp8 benchmarks took **1620.7–1903.6 s (~27–31.7 min)** across two scenes/orientations; an A14B I2V run took **489.2 s (~8.2 min)** for 81 frames with a raccoon input. These measurements are not general time or quality guarantees, nor timings for `draft`. See [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22). This MCP integration has not yet been tested on the live GPU.
 
 - **Parameters**:
-  - `prompt` (*string*, required): Scene and motion (camera, subject), in English.
-  - `aspect` (*string*, optional): `16:9` (1280x704), `9:16` (704x1280) or `1:1` (960x960). Default: `"16:9"`.
-  - `seconds` (*integer*, optional): Duration, 1-5. Default: `3`.
-  - `image_filename` (*string*, optional): Already generated image to animate (e.g. `mcp_00001_.png`); its aspect should match the video's.
-  - `draft` (*bool*, optional): ~480p draft (`832x480`, `480x832`, `640x640`), less than half the pixels and much faster; for testing the prompt before the final take. Default: `false`.
-  - `negative_prompt`, `seed`, `steps`, `cfg`, `filename_prefix` (optional). Default prefix: `"mcp-video"`.
-  - `preview` (*bool*, optional): JPEG thumbnail of the first frame. Default: `false`.
+  - `prompt` (*string*, required): Scene and motion; English recommended.
+  - `aspect` (*string*, optional): A14B `16:9` (832×480), `9:16` (480×832); 5B `16:9` (1280×704), `9:16` (704×1280), `1:1` (960×960). Default `"16:9"`; A14B rejects `1:1`.
+  - `seconds` (*integer*, optional): Clamped to 1-5. A14B 16 fps + 1 frame (81 at 5 s); 5B 24 fps + 1 frame (121 at 5 s). Default `3`.
+  - `image_filename` (*string*, optional): An existing `[output]` image to animate; match the orientation. `model="auto"` selects A14B with an image, 5B without.
+  - `model` (*string*, optional): `auto` (default), `a14b` (requires an image), or `5b` (retains the previous 5B I2V and T2V path). Existing parameters remain unchanged.
+  - `draft` (*bool*, optional): 5B only: keeps ~720p resolution but caps duration at 2 s (49 frames at 24 fps); no measured timing. A14B rejects `draft=true`.
+  - `steps`, `cfg`: A14B fixes these to `4` and `1` with lightx2v; other explicit values are rejected. 5B defaults to 30 and 5; explicit values override them.
+  - `negative_prompt`, `seed`, `filename_prefix` (optional). Prefix defaults to `"mcp-video"`.
+  - `preview` (*bool*, optional): JPEG thumbnail of the first frame.
 
 ### 4. `list_models`
 Returns available checkpoints, LoRAs, and presets on the ComfyUI instance.
@@ -220,4 +222,4 @@ uv run --with pytest --with pytest-asyncio pytest
 
 ## 📄 License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This MCP code is MIT licensed ([LICENSE](LICENSE)); it does **not** license or distribute model weights. The original [Wan 2.2 TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) and [Wan 2.2 I2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B) repositories state Apache 2.0 for their models. ComfyUI repackagings, third-party GGUF and LoRA may carry separate terms; check each distribution before downloading, redistributing or commercial use. See [SERVER_SETUP](docs/SERVER_SETUP.md#-step-2b-modelos-de-video-wan-22) for requirements and exact filenames.
